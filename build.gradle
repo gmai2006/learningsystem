@@ -1,0 +1,166 @@
+plugins {
+    id 'java'
+    id("com.diffplug.spotless") version "8.0.0"
+}
+
+apply plugin: 'java'
+apply plugin: 'war'
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+    mavenCentral()
+    flatDir { dirs "./" }
+}
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+
+    compileOnly group: 'javax', name: 'javaee-api', version: '7.0'
+    compileOnly group: 'org.hibernate', name: 'hibernate-entitymanager', version: '5.0.7.Final'
+    compileOnly group: 'javax.validation', name: 'validation-api', version: '1.1.0.Final'
+    compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.9.5'
+
+    compileOnly group: 'jakarta.inject', name: 'jakarta.inject-api', version: '2.0.1'
+    compileOnly group: 'jakarta.ws.rs', name: 'jakarta.ws.rs-api', version: '4.0.0'
+    compileOnly group: 'jakarta.ejb', name: 'jakarta.ejb-api', version: '4.0.1'
+    compileOnly group: 'jakarta.persistence', name: 'jakarta.persistence-api', version: '3.2.0'
+    compileOnly group: 'jakarta.validation', name: 'jakarta.validation-api', version: '3.1.0'
+    compileOnly group: 'org.hibernate', name: 'hibernate-core', version: '6.6.1.Final'
+    compileOnly group: 'org.hibernate', name: 'hibernate-entitymanager', version: '6.0.0.Alpha7'
+    compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
+
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.2'
+    implementation group: 'org.apache.commons', name: 'commons-csv', version: '1.7'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.7'
+    implementation group: 'org.json', name: 'json', version: '20201115'
+    implementation 'org.apache.kafka:kafka-clients:3.6.1'
+    implementation 'jakarta.websocket:jakarta.websocket-api:2.1.1'
+    implementation("jakarta.websocket:jakarta.websocket-client-api:2.1.1")
+    implementation group: 'com.typesafe', name: 'config', version: '1.2.1'
+    implementation("jakarta.annotation:jakarta.annotation-api:3.0.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.1")
+    implementation 'com.google.zxing:core:3.5.1'
+    implementation 'com.google.zxing:javase:3.5.1'
+    implementation("jakarta.activation:jakarta.activation-api:2.2.0-M1")
+    implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.4")
+    implementation("org.glassfish.jersey.media:jersey-media-multipart:4.0.0")
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
+    implementation("jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0")
+    implementation("ca.uhn.hapi.fhir:hapi-fhir-structures-r4:8.6.0")
+
+    implementation("org.apache.pdfbox:pdfbox:3.0.6")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.6")
+
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.12.4'
+    testImplementation group: 'org.hibernate', name: 'hibernate-entitymanager', version: '5.0.7.Final'
+    testImplementation group: 'com.h2database', name: 'h2', version: '1.4.197'
+    testImplementation group: 'io.rest-assured', name: 'rest-assured', version: '3.1.0'
+    testImplementation group: 'commons-io', name: 'commons-io', version: '2.7'
+    testImplementation group: 'org.json', name: 'json', version: '20200518'
+    testImplementation group: 'jakarta.inject', name: 'jakarta.inject-api', version: '2.0.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.0.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation group: 'jakarta.inject', name: 'jakarta.inject-api', version: '2.0.1'
+    testImplementation group: 'jakarta.ejb', name: 'jakarta.ejb-api', version: '4.0.1'
+    testImplementation group: 'jakarta.persistence', name: 'jakarta.persistence-api', version: '3.2.0'
+    testImplementation group: 'jakarta.validation', name: 'jakarta.validation-api', version: '3.1.0'
+    testImplementation group: 'org.hibernate', name: 'hibernate-core', version: '6.6.1.Final'
+    testImplementation group: 'org.hibernate', name: 'hibernate-entitymanager', version: '6.0.0.Alpha7'
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        googleJavaFormat().aosp().reflowLongStrings()
+    }
+}
+
+javadoc {
+    destinationDir = file("${buildDir}/docs/javadoc")
+}
+
+test {
+    filter {
+        exclude '**/*It*'
+    }
+    minHeapSize = "2048m"
+    maxHeapSize = "4096m"
+    forkEvery 30
+}
+
+tasks.register('IntegrationTest', Test) {
+    include '**/*'
+    minHeapSize = "2048m"
+    maxHeapSize = "4096m"
+    forkEvery 30
+}
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+tasks.register('npmInstall', Exec) {
+    String npm = 'npm'
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        npm = 'npm.cmd'
+    }
+    workingDir './ui'
+    commandLine npm, 'install'
+}
+
+tasks.register('buildReact', Exec) {
+    dependsOn tasks.npmInstall
+    workingDir "./ui"
+    println '' + workingDir
+    commandLine 'npm', 'run-script', 'build'
+}
+
+tasks.register('copyReact', Copy) {
+    dependsOn tasks.buildReact
+    from("${projectDir}/ui/dist/")
+    into("${projectDir}/src/main/webapp/")
+    include("**/*")
+}
+
+tasks.register("buildAll", Copy) {
+    dependsOn spotlessApply
+    dependsOn tasks.build
+    dependsOn tasks.copyReact
+    dependsOn tasks.copySource
+    tasks.findByName('copyReact').mustRunAfter 'copySource'
+    tasks.findByName('war').mustRunAfter 'copyReact'
+    from "${project.rootDir}/build/libs/"
+    into "${project.rootDir}/dockerbuild"
+    include '*.war'
+}
+
+tasks.register('copyOnly', Copy) {
+    from("${projectDir}/ui/dist/")
+    into("${projectDir}/src/main/webapp/")
+    include("**/*")
+}
+
+//tasks.register('copySource', Copy) {
+//    copySourceToResource()
+//}
+
+//def copySourceToResource() {
+//    println("Call copying resources")
+//    File f = new File("${projectDir}/src/main/java")
+//    String dest = "${projectDir}/src/main/resources/"
+//    copySourceFile(f, dest);
+//}
+
+//def copySourceFile(File file, String dest) {
+//    if (file.isFile()) {
+//        Files.copy(file.toPath(), (new File(dest + file.getName())).toPath(), StandardCopyOption.REPLACE_EXISTING);
+//    } else {
+//        File[] children = file.listFiles()
+//        for (File child : children) {
+//            copySourceFile(child, dest)
+//        }
+//    }
+//}
