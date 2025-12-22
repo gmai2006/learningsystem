@@ -4,23 +4,18 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "applied_learning_experiences")
 public class AppliedLearningExperience {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    @Id @GeneratedValue private UUID id;
 
-    // Manual foreign key relationship
     @Column(name = "student_id", nullable = false)
     private UUID studentId;
 
@@ -28,7 +23,8 @@ public class AppliedLearningExperience {
     private UUID facultyAdvisorId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(nullable = false, name = "type", columnDefinition = "learning_type")
     private LearningType type;
 
     @Column(nullable = false)
@@ -37,8 +33,8 @@ public class AppliedLearningExperience {
     @Column(name = "organization_name")
     private String organizationName;
 
-    @Column(name = "status")
-    private String status = "DRAFT";
+    @Column(length = 50)
+    private String status = "DRAFT"; // DRAFT, PENDING, APPROVED, COMPLETED
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -46,34 +42,49 @@ public class AppliedLearningExperience {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "canvas_course_id")
+    @Column(name = "canvas_course_id", length = 50)
     private String canvasCourseId;
 
-    /**
-     * Standard Hibernate 6 JSON mapping. Maps to 'jsonb' in PostgreSQL automatically when dialect
-     * is configured correctly.
-     */
+    // --- JSONB Mapping for 16 Types ---
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "type_specific_data", columnDefinition = "jsonb")
     private Map<String, Object> typeSpecificData;
 
-    @CreationTimestamp
+    @Column(name = "is_verified")
+    private boolean verified = false;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
-    public AppliedLearningExperience() {}
-
-    // Getters and Setters
-    public UUID getId() {
-        return id;
+    // Standard Getters and Setters
+    public Map<String, Object> getTypeSpecificData() {
+        return typeSpecificData;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
+    public void setTypeSpecificData(Map<String, Object> data) {
+        this.typeSpecificData = data;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public LocalDateTime getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public void setVerifiedAt(LocalDateTime verifiedAt) {
+        this.verifiedAt = verifiedAt;
     }
 
     public UUID getStudentId() {
@@ -148,14 +159,6 @@ public class AppliedLearningExperience {
         this.canvasCourseId = canvasCourseId;
     }
 
-    public Map<String, Object> getTypeSpecificData() {
-        return typeSpecificData;
-    }
-
-    public void setTypeSpecificData(Map<String, Object> typeSpecificData) {
-        this.typeSpecificData = typeSpecificData;
-    }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -172,16 +175,7 @@ public class AppliedLearningExperience {
         this.updatedAt = updatedAt;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        AppliedLearningExperience that = (AppliedLearningExperience) o;
-        return Objects.equals(id, that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
+    public UUID getId() {
+        return id;
     }
 }

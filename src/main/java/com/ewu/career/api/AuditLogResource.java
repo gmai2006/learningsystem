@@ -24,18 +24,30 @@ public class AuditLogResource {
     @GET
     public Response getFullLogs(
             @QueryParam("limit") @DefaultValue("50") int limit,
-            @QueryParam("offset") @DefaultValue("0") int offset) {
+            @QueryParam("offset") @DefaultValue("0") int offset,
+            @QueryParam("action") String action,
+            @QueryParam("actor") String name) {
 
         try {
             User actor = authContext.getActor();
 
-            // Security Check
-            if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
-                return Response.status(Response.Status.FORBIDDEN).build();
+            if (actor == null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authentication required.")
+                        .build();
             }
 
-            List<AuditLog> logs = auditDao.findAll(limit, offset);
-            return Response.ok(logs).build();
+            if (actor.getRole() != UserRole.STAFF) {
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity("Only Staff can access the Recruitment Silo.")
+                        .build();
+            }
+
+            List<AuditLog> logs = auditDao.findByFilters(limit, offset, action, name);
+            // Fetch total count for pagination math
+            long total = auditDao.countByFilters(action);
+
+            return Response.ok(logs).header("X-Total-Count", total).build();
 
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -50,8 +62,16 @@ public class AuditLogResource {
     public Response exportLogs() {
         User actor = authContext.getActor();
         // Security check: STAFF/FACULTY only
-        if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
-            return Response.status(Response.Status.FORBIDDEN).build();
+        if (actor == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+
+        if (actor.getRole() != UserRole.STAFF) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Only Staff can access the Recruitment Silo.")
+                    .build();
         }
 
         List<AuditLog> allLogs = auditDao.findAll(1000, 0); // Export recent 1000

@@ -23,7 +23,7 @@ public class SystemConfigDao {
 
     /** Retrieves a configuration value by key. */
     public String getValue(String key, String defaultValue) {
-        SystemConfig config = getEntityManager().find(SystemConfig.class, key);
+        SystemConfig config = jpa.find(SystemConfig.class, key);
         return (config != null) ? config.getValue() : defaultValue;
     }
 
@@ -34,15 +34,14 @@ public class SystemConfigDao {
 
     /** Updates an existing configuration and logs the staff member responsible. */
     public void updateConfig(String key, String value, UUID staffId) {
-        EntityManager em = getEntityManager();
-        SystemConfig config = em.find(SystemConfig.class, key);
+        SystemConfig config = jpa.find(SystemConfig.class, key);
 
         if (config != null) {
             config.setValue(value);
             config.setUpdatedBy(staffId);
             config.setUpdatedAt(LocalDateTime.now());
             // Using jpa.update if the base DAO provides a specialized merge wrapper
-            em.merge(config);
+            jpa.update(config);
         }
     }
 

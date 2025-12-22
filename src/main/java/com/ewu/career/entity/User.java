@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 
 @Entity
 @Table(name = "users")
@@ -15,7 +17,7 @@ public class User {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "okta_id", nullable = false, unique = true)
+    @Column(name = "okta_id", unique = true)
     private String oktaId;
 
     @Column(name = "banner_id", unique = true)
@@ -31,7 +33,8 @@ public class User {
     private String lastName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(nullable = false, columnDefinition = "user_role")
     private UserRole role;
 
     @Column(name = "is_active")

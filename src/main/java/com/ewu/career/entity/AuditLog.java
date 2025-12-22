@@ -46,6 +46,28 @@ public class AuditLog {
         }
     }
 
+    public AuditLog() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public AuditLog(
+            UUID actorId,
+            String actorName,
+            String action,
+            String targetType,
+            UUID targetId,
+            String details,
+            String ipAddress) {
+        this();
+        this.actorId = actorId;
+        this.actorName = actorName;
+        this.action = action;
+        this.targetType = targetType;
+        this.targetId = targetId;
+        this.details = details;
+        this.ipAddress = ipAddress;
+    }
+
     // --- Getters and Setters ---
 
     public UUID getId() {

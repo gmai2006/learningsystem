@@ -8,6 +8,7 @@ import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,6 +19,14 @@ public class AppliedLearningService {
     private static final Set<String> ADMIN_ROLES = Set.of("STAFF", "FACULTY");
 
     @Inject private AppliedLearningExperienceDao experienceDao;
+
+    public Map<String, Object> getExtendedStats() {
+        return experienceDao.getExtendedStats();
+    }
+
+    public List<AppliedLearningExperience> searchByMetadata(Map<String, String> filters) {
+        return experienceDao.findByDynamicJsonMetadata(filters);
+    }
 
     public AppliedLearningExperience find(UUID id) {
         return experienceDao.find(id);

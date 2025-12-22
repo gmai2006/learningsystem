@@ -31,24 +31,40 @@ public class AuditLogDao {
                 .getResultList();
     }
 
-    public List<AuditLog> findByFilters(int limit, int offset, String action) {
-        String jpql = "SELECT a FROM AuditLog a ";
+    public List<AuditLog> findByFilters(int limit, int offset, String action, String actor) {
+        StringBuilder jpql = new StringBuilder("SELECT a FROM AuditLog a WHERE 1=1 ");
+
         if (action != null && !action.isEmpty()) {
-            jpql += "WHERE a.action = :action ";
+            jpql.append("AND a.action = :action ");
         }
-        jpql += "ORDER BY a.createdAt DESC";
+        if (actor != null && !actor.isEmpty()) {
+            jpql.append("AND LOWER(a.actorName) LIKE LOWER(:actor) ");
+        }
+
+        jpql.append("ORDER BY a.createdAt DESC");
 
         var query =
                 jpa.getEntityManager()
-                        .createQuery(jpql, AuditLog.class)
+                        .createQuery(jpql.toString(), AuditLog.class)
                         .setFirstResult(offset)
                         .setMaxResults(limit);
 
+        if (action != null && !action.isEmpty()) query.setParameter("action", action);
+        if (actor != null && !actor.isEmpty()) query.setParameter("actor", "%" + actor + "%");
+
+        return query.getResultList();
+    }
+
+    public long countByFilters(String action) {
+        String jpql = "SELECT COUNT(a) FROM AuditLog a ";
+        if (action != null && !action.isEmpty()) {
+            jpql += "WHERE a.action = :action";
+        }
+        var query = jpa.getEntityManager().createQuery(jpql, Long.class);
         if (action != null && !action.isEmpty()) {
             query.setParameter("action", action);
         }
-
-        return query.getResultList();
+        return query.getSingleResult();
     }
 
     public AuditLog create(AuditLog entity) {

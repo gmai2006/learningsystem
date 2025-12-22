@@ -2,6 +2,7 @@ package com.ewu.career.api;
 
 import com.ewu.career.entity.JobPosting;
 import com.ewu.career.entity.User;
+import com.ewu.career.entity.UserRole;
 import com.ewu.career.service.JobPostingService;
 import com.ewu.career.service.UserService;
 import jakarta.inject.Inject;
@@ -46,10 +47,15 @@ public class JobPostingResource {
     @Path("/admin/all")
     public Response getAllJobsForStaff() {
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
         }
-        if (!"STAFF".equals(actor.getRole().name())) {
-            return Response.status(Response.Status.FORBIDDEN).build();
+        // Role-based security check (Staff/Faculty only)
+        if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Access denied: Insufficient privileges for global oversight.")
+                    .build();
         }
 
         // Calls a DAO method that ignores fundingSource and isActive flags
@@ -61,7 +67,15 @@ public class JobPostingResource {
     @POST
     public Response createJob(JobPosting job) {
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+        // Role-based security check (Staff/Faculty only)
+        if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Access denied: Insufficient privileges for global oversight.")
+                    .build();
         }
         try {
             JobPosting created = jobPostingService.createJob(actor, job);
@@ -79,7 +93,15 @@ public class JobPostingResource {
     @Path("/{id}")
     public Response updateJob(@PathParam("id") UUID id, JobPosting job) {
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+        // Role-based security check (Staff/Faculty only)
+        if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Access denied: Insufficient privileges for global oversight.")
+                    .build();
         }
         job.setId(id);
         try {
@@ -95,7 +117,15 @@ public class JobPostingResource {
     @Path("/{id}/status")
     public Response toggleStatus(@PathParam("id") UUID id, @QueryParam("active") boolean active) {
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+        // Role-based security check (Staff/Faculty only)
+        if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Access denied: Insufficient privileges for global oversight.")
+                    .build();
         }
         try {
             jobPostingService.setJobStatus(actor, id, active);

@@ -5,6 +5,7 @@ import com.ewu.career.dao.SystemConfigDao;
 import com.ewu.career.dto.ConfigUpdateRequest;
 import com.ewu.career.entity.SystemConfig;
 import com.ewu.career.entity.User;
+import com.ewu.career.entity.UserRole;
 import com.ewu.career.interceptor.AuditAction;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -34,6 +35,18 @@ public class ConfigResource {
     public Response updateConfigs(ConfigUpdateRequest request) {
         // Retrieve the authenticated User entity from AuthContext
         User staffMember = authContext.getActor();
+
+        if (staffMember == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+
+        if (staffMember.getRole() != UserRole.STAFF) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Only Staff can access the Recruitment Silo.")
+                    .build();
+        }
 
         // Use the staff member's real ID for the update audit trail
         request.getSettings()

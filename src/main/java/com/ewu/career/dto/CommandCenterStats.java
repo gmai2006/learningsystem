@@ -9,6 +9,9 @@ public class CommandCenterStats {
     public long pendingJobApprovals;
     public long unverifiedExperiences;
     public long employerPartners;
+    public long newEmployerPartners;
+    public long activePlacements;
+    public String completionRate;
 
     // Distribution of the 16 Applied Learning Types
     public Map<String, Long> experienceDistribution;

@@ -6,6 +6,8 @@ import com.ewu.career.entity.UserRole;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import jakarta.persistence.TypedQuery;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,8 +69,78 @@ public class UserDao {
                 .getSingleResult();
     }
 
-    public List<User> selectAll() {
-        return jpa.selectAll("SELECT u FROM User u", User.class);
+    /** Finds users based on partial name or email matching and role filtering. */
+    public List<User> findUsers(int limit, int offset, String search, String role) {
+        StringBuilder jpql = new StringBuilder("SELECT u FROM User u WHERE 1=1 ");
+
+        appendFilters(jpql, search, role);
+        jpql.append("ORDER BY u.lastName ASC, u.firstName ASC");
+
+        TypedQuery<User> query =
+                jpa.getEntityManager()
+                        .createQuery(jpql.toString(), User.class)
+                        .setFirstResult(offset)
+                        .setMaxResults(limit);
+
+        bindParameters(query, search, role);
+        return query.getResultList();
+    }
+
+    /** Counts the total number of users matching the filter criteria. */
+    public long countByFilters(String search, String role) {
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(u) FROM User u WHERE 1=1 ");
+
+        appendFilters(jpql, search, role);
+
+        TypedQuery<Long> query = jpa.getEntityManager().createQuery(jpql.toString(), Long.class);
+        bindParameters(query, search, role);
+
+        return query.getSingleResult();
+    }
+
+    /** Counts users of a specific role created on or after the provided timestamp. */
+    public long countUsersByRoleAndDate(UserRole role, LocalDateTime since) {
+        String jpql = "SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.createdAt >= :since";
+
+        return jpa.getEntityManager()
+                .createQuery(jpql, Long.class)
+                .setParameter("role", role)
+                .setParameter("since", since)
+                .getSingleResult();
+    }
+
+    /** Shared logic to build the WHERE clause for search and role. */
+    private void appendFilters(StringBuilder jpql, String search, String role) {
+        if (search != null && !search.isEmpty()) {
+            jpql.append("AND (LOWER(u.email) LIKE LOWER(:query) ")
+                    .append("OR LOWER(u.firstName) LIKE LOWER(:query) ")
+                    .append("OR LOWER(u.lastName) LIKE LOWER(:query) ")
+                    .append("OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(:query)) ");
+        }
+
+        if (role != null && !role.isEmpty()) {
+            // Correct JPQL: Compare the field to a parameter.
+            // JPA handles the conversion from the Enum object to the DB Type.
+            jpql.append("AND u.role = :role ");
+        }
+    }
+
+    private void bindParameters(TypedQuery<?> query, String search, String role) {
+        if (search != null && !search.isEmpty()) {
+            query.setParameter("query", "%" + search + "%");
+        }
+
+        if (role != null && !role.isEmpty()) {
+            try {
+                // CRITICAL: Convert the string "STUDENT" into the UserRole ENUM object
+                UserRole roleEnum = UserRole.valueOf(role.toUpperCase());
+                query.setParameter("role", roleEnum);
+            } catch (IllegalArgumentException e) {
+                // If the role string is invalid, bind a null or a dummy value
+                // so the query doesn't crash but also doesn't match anything.
+                query.setParameter("role", null);
+            }
+        }
     }
 
     public User create(User entity) {

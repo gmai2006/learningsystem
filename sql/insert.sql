@@ -253,3 +253,172 @@ INSERT INTO learningsystem.system_configs (config_key, config_value, description
 ('JOB_APPROVAL_REQUIRED', 'TRUE', 'Global toggle for vetting employer postings.'),
 ('FWS_CHECK_ENABLED', 'TRUE', 'Enforce Federal Work Study eligibility via Banner sync.'),
 ('EXPERIENCE_DEADLINE', '2026-05-15', 'Final date for students to submit learning logs.');
+
+-- 1. Insert a PENDING Internship (Unverified)
+INSERT INTO learningsystem.applied_learning_experiences (
+    id,
+    student_id,
+    faculty_advisor_id,
+    type,
+    title,
+    organization_name,
+    status,
+    start_date,
+    end_date,
+    type_specific_data,
+    is_verified,
+    created_at
+) VALUES (
+    gen_random_uuid(),
+    (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+    (SELECT id FROM learningsystem.users WHERE role = 'FACULTY' ORDER BY random() LIMIT 1),
+    'INTERNSHIP',
+    'Junior Software Developer',
+    'F5 Networks',
+    'PENDING',
+    '2026-01-05',
+    '2026-05-15',
+    '{"credit_hours": 4, "mentor_name": "Jane Doe", "department": "Cloud Services"}',
+    FALSE,
+    NOW() - INTERVAL '3 days'
+);
+
+-- 2. Insert an APPROVED Research Project (Verified)
+INSERT INTO learningsystem.applied_learning_experiences (
+    id,
+    student_id,
+    faculty_advisor_id,
+    type,
+    title,
+    organization_name,
+    status,
+    start_date,
+    end_date,
+    type_specific_data,
+    is_verified,
+    verified_at,
+    created_at
+) VALUES (
+    gen_random_uuid(),
+    (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+    (SELECT id FROM learningsystem.users WHERE role = 'FACULTY' ORDER BY random() LIMIT 1),
+    'RESEARCH',
+    'Biochemical Soil Analysis',
+    'EWU Biology Lab',
+    'APPROVED',
+    '2025-09-01',
+    '2025-12-15',
+    '{"grant_funded": true, "lab_number": "S-304", "publication_target": "Nature Journal"}',
+    TRUE,
+    NOW() - INTERVAL '1 day',
+    NOW() - INTERVAL '15 days'
+);
+
+-- 3. Insert a COMPLETED Service Learning experience with Canvas ID
+INSERT INTO learningsystem.applied_learning_experiences (
+    id,
+    student_id,
+    faculty_advisor_id,
+    type,
+    title,
+    organization_name,
+    status,
+    canvas_course_id,
+    type_specific_data,
+    is_verified,
+    verified_at,
+    created_at
+) VALUES (
+    gen_random_uuid(),
+    (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+    (SELECT id FROM learningsystem.users WHERE role = 'FACULTY' ORDER BY random() LIMIT 1),
+    'SERVICE_LEARNING',
+    'Youth Literacy Tutor',
+    'Spokane Public Schools',
+    'COMPLETED',
+    'CANV-10293',
+    '{"hours_completed": 40, "community_partner_contact": "John Smith"}',
+    TRUE,
+    NOW() - INTERVAL '5 days',
+    NOW() - INTERVAL '60 days'
+);
+
+SELECT
+    u.last_name AS student_name,
+    e.type,
+    e.status,
+    e.is_verified,
+    e.type_specific_data->>'mentor_name' AS mentor
+FROM learningsystem.applied_learning_experiences e
+JOIN learningsystem.users u ON e.student_id = u.id;
+
+-- 1. INTERNSHIP
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'INTERNSHIP', 'Cybersecurity Analyst Intern', 'F5 Networks', 'PENDING', '{"credit_hours": 5, "mentor": "Jane Smith", "stipend": 2000}');
+
+-- 2. PRACTICUM
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'PRACTICUM', 'K-12 Teaching Practicum', 'Cheney School District', 'APPROVED', '{"classroom_grade": "4th", "observation_hours": 40}');
+
+-- 3. CLINICAL
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'CLINICAL', 'Nursing Rotation - ICU', 'Providence Sacred Heart', 'APPROVED', '{"unit": "Critical Care", "clinical_instructor": "Dr. Miller", "total_shifts": 12}');
+
+-- 4. CO_OP
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'CO_OP', 'Engineering Cooperative Program', 'Boeing', 'PENDING', '{"term": "Spring 2026", "department": "Aerospace Design", "is_paid": true}');
+
+-- 5. STUDENT_EMPLOYMENT
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'STUDENT_EMPLOYMENT', 'IT Help Desk Assistant', 'EWU IT Services', 'COMPLETED', '{"supervisor": "Bill Gates", "hours_per_week": 15}');
+
+-- 6. RESEARCH
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'RESEARCH', 'Soil Nutrient Analysis Research', 'EWU Environmental Lab', 'APPROVED', '{"lab_id": "S-201", "grant_number": "NSF-8892", "is_published": false}');
+
+-- 7. FIELD_WORK
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'FIELD_WORK', 'Geological Surveying', 'Turnbull Wildlife Refuge', 'PENDING', '{"equipment_used": "GPS, Soil Probe", "permit_id": "TW-002"}');
+
+-- 8. FELLOWSHIP
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'FELLOWSHIP', 'Graduate Leadership Fellowship', 'EWU Foundation', 'APPROVED', '{"cohort_name": "Leaders 2025", "award_amount": 5000}');
+
+-- 9. STUDY_ABROAD
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'STUDY_ABROAD', 'History of Art in Florence', 'University of Florence', 'APPROVED', '{"country": "Italy", "language_of_instruction": "Italian", "credits_transferable": true}');
+
+-- 10. VOLUNTEERISM
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'VOLUNTEERISM', 'Weekend Food Bank Support', 'Second Harvest', 'COMPLETED', '{"impact_area": "Food Insecurity", "total_hours": 50}');
+
+-- 11. COMMUNITY_PROJECT
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'COMMUNITY_PROJECT', 'Mural Restoration', 'City of Cheney', 'PENDING', '{"community_partner": "Downtown Arts", "location": "1st Street"}');
+
+-- 12. SERVICE_LEARNING
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'SERVICE_LEARNING', 'Literacy Outreach', 'Spokane Public Library', 'APPROVED', '{"canvas_course_id": "ENGL-101", "is_mandatory": true}');
+
+-- 13. CLASSROOM_SIMULATION
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'CLASSROOM_SIMULATION', 'Mock Trial - Criminal Law', 'EWU Law Society', 'COMPLETED', '{"role_played": "Prosecutor", "case_topic": "Property Law"}');
+
+-- 14. LAB_WORK
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'LAB_WORK', 'Advanced Circuit Testing', 'Engineering Lab 4', 'APPROVED', '{"bench_number": 12, "safety_certified": true}');
+
+-- 15. ARTS_PERFORMANCE
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'ARTS_PERFORMANCE', 'Senior Jazz Ensemble', 'EWU Recital Hall', 'COMPLETED', '{"instrument": "Tenor Sax", "repertoire": "Coltrane Basics"}');
+
+-- 16. APPRENTICESHIP
+INSERT INTO learningsystem.applied_learning_experiences (id, student_id, type, title, organization_name, status, type_specific_data)
+VALUES (gen_random_uuid(), (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1), 'APPRENTICESHIP', 'Master HVAC Training', 'McKinstry', 'PENDING', '{"journeyman_license": "A-9923", "phase": "Level 1 Induction"}');
+
+SELECT
+    type,
+    title,
+    type_specific_data->>'total_hours' as hours,
+    type_specific_data->>'is_paid' as paid
+FROM learningsystem.applied_learning_experiences;

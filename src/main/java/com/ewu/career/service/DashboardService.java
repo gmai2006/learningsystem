@@ -2,10 +2,13 @@ package com.ewu.career.service;
 
 import com.ewu.career.dao.*;
 import com.ewu.career.dto.CommandCenterStats;
+import com.ewu.career.entity.UserRole;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +29,7 @@ public class DashboardService {
         stats.pendingJobApprovals = jobDao.countPending();
         stats.unverifiedExperiences = experienceDao.countUnverified();
         stats.employerPartners = userDao.countByRole("EMPLOYER");
-
+        stats.newEmployerPartners = getNewEmployersThisWeek();
         // 2. Map Applied Learning Distribution (Sample logic for the 16 types)
         Map<String, Long> dist = new HashMap<>();
         dist.put("Internships", experienceDao.countByType("INTERNSHIP"));
@@ -38,6 +41,20 @@ public class DashboardService {
         stats.recentActivity = getRecentAuditLogs();
 
         return stats;
+    }
+
+    /** Counts employers registered since the beginning of the current week (Monday). */
+    public long getNewEmployersThisWeek() {
+        // Calculate Monday 00:00:00 of the current week
+        LocalDateTime startOfWeek =
+                LocalDateTime.now()
+                        .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                        .withHour(0)
+                        .withMinute(0)
+                        .withSecond(0)
+                        .withNano(0);
+
+        return userDao.countUsersByRoleAndDate(UserRole.EMPLOYER, startOfWeek);
     }
 
     public List<CommandCenterStats.ActivityLog> getRecentAuditLogs() {

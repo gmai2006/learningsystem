@@ -6,7 +6,7 @@ CREATE TYPE learningsystem.user_role AS ENUM ('STUDENT', 'FACULTY', 'STAFF', 'EM
 
 CREATE TABLE learningsystem.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    okta_id VARCHAR(255) UNIQUE NOT NULL, -- Links to Okta/SSO
+    okta_id VARCHAR(255) UNIQUE, -- Links to Okta/SSO
     banner_id VARCHAR(50) UNIQUE,         -- Links to Banner Data
     email VARCHAR(255) UNIQUE NOT NULL,
     first_name VARCHAR(100),
@@ -15,6 +15,14 @@ CREATE TABLE learningsystem.users (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE learningsystem.users
+    ALTER COLUMN okta_id DROP NOT NULL,
+    ALTER COLUMN banner_id DROP NOT NULL;
+
+-- Ensure uniqueness while allowing multiple NULLs
+CREATE UNIQUE INDEX idx_user_okta_id ON learningsystem.users (okta_id) WHERE okta_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_user_banner_id ON learningsystem.users (banner_id) WHERE banner_id IS NOT NULL;
 
 -- Student specific data
 CREATE TABLE learningsystem.student_profiles (
@@ -67,8 +75,23 @@ CREATE TABLE learningsystem.applied_learning_experiences (
     type_specific_data JSONB,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified_at TIMESTAMP WITH TIME ZONE
 );
+
+--ALTER TABLE learningsystem.applied_learning_experiences
+--ADD COLUMN is_verified BOOLEAN DEFAULT FALSE,
+--ADD COLUMN verified_at TIMESTAMP WITH TIME ZONE;
+
+-- Optional: If you already have data, you might want to sync it
+UPDATE learningsystem.applied_learning_experiences
+SET is_verified = TRUE
+WHERE verified_at IS NOT NULL;
+
+CREATE INDEX idx_experiences_jsonb_data
+ON learningsystem.applied_learning_experiences
+USING GIN (type_specific_data);
 
 -- Workflow & "No-Login" Approvals
 CREATE TABLE learningsystem.workflows (

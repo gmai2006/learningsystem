@@ -4,11 +4,13 @@ import com.ewu.career.api.security.AuthContext;
 import com.ewu.career.dto.CommandCenterStats;
 import com.ewu.career.entity.User;
 import com.ewu.career.entity.UserRole;
+import com.ewu.career.service.AppliedLearningService;
 import com.ewu.career.service.DashboardService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.Map;
 
 @Path("/admin/dashboard")
 @Produces(MediaType.APPLICATION_JSON)
@@ -16,6 +18,7 @@ import jakarta.ws.rs.core.Response;
 public class DashboardResource {
 
     @Inject private DashboardService dashboardService;
+    @Inject private AppliedLearningService learningService;
 
     @Inject private AuthContext authContext; // Injected to verify the identity of the staff member
 
@@ -29,7 +32,11 @@ public class DashboardResource {
         try {
             // Retrieve the authenticated User entity
             User actor = authContext.getActor();
-
+            if (actor == null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authentication required.")
+                        .build();
+            }
             // Role-based security check (Staff/Faculty only)
             if (actor.getRole() != UserRole.STAFF && actor.getRole() != UserRole.FACULTY) {
                 return Response.status(Response.Status.FORBIDDEN)
@@ -37,8 +44,11 @@ public class DashboardResource {
                         .build();
             }
 
+            Map<String, Object> extended = learningService.getExtendedStats();
             // Fetch the aggregated statistics for the UI
             CommandCenterStats stats = dashboardService.getAggregatedStats();
+            stats.activePlacements = (Long) extended.get("activePlacements");
+            stats.completionRate = (String) extended.get("completionRate");
 
             return Response.ok(stats).build();
 

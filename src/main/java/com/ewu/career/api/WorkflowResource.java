@@ -36,7 +36,9 @@ public class WorkflowResource {
             @PathParam("experienceId") UUID experienceId, Map<String, Object> payload) {
 
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
         }
 
         AppliedLearningExperience exp = experienceService.find(experienceId);
@@ -63,7 +65,9 @@ public class WorkflowResource {
     @Path("/details")
     public Response getDetailsByToken(@QueryParam("token") String token) {
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
         }
         // This logic would normally be inside WorkflowService, shown here for clarity
         // It fetches the experience data associated with a valid token
@@ -83,7 +87,9 @@ public class WorkflowResource {
     @Path("/process")
     public Response processApproval(Map<String, String> request) {
         if (actor == null) {
-            return Response.status(401).entity("Not authenticated").build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
         }
 
         String token = request.get("token");
