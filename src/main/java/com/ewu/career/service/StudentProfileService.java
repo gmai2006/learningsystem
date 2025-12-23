@@ -1,6 +1,7 @@
 package com.ewu.career.service;
 
 import com.ewu.career.dao.StudentProfileDao;
+import com.ewu.career.dto.StudentProfileDTO;
 import com.ewu.career.entity.StudentProfile;
 import com.ewu.career.entity.User;
 import jakarta.ejb.Stateless;
@@ -14,8 +15,8 @@ public class StudentProfileService {
 
     @Inject private StudentProfileDao profileDao;
 
-    public StudentProfile findByUserId(UUID userId) {
-        return profileDao.find(userId);
+    public StudentProfileDTO findByUserId(UUID userId) {
+        return profileDao.findByUserId(userId);
     }
 
     public StudentProfile updateProfile(User actor, StudentProfile updatedProfile) {
@@ -29,8 +30,8 @@ public class StudentProfileService {
 
         // Ensure only Staff can modify Work Study eligibility manually
         if (!isStaff) {
-            StudentProfile existing = profileDao.find(updatedProfile.getUserId());
-            updatedProfile.setIsWorkStudyEligible(existing.getIsWorkStudyEligible());
+            StudentProfileDTO existing = profileDao.findByUserId(updatedProfile.getUserId());
+            updatedProfile.setWorkStudyEligible(existing.workStudyEligible());
         }
 
         return profileDao.update(updatedProfile);

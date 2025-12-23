@@ -35,6 +35,45 @@ CREATE TABLE learningsystem.student_profiles (
     portfolio_url TEXT -- Student career portfolio [cite: 97]
 );
 
+ALTER TABLE learningsystem.student_profiles
+    ADD COLUMN bio TEXT,
+    ADD COLUMN linkedin_url TEXT,
+    ADD COLUMN github_url TEXT,
+    ADD COLUMN profile_verified BOOLEAN DEFAULT FALSE,
+    ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Skills are best handled in a separate 'join' table to allow
+-- for easy searching/filtering by employers.
+CREATE TABLE learningsystem.student_skills (
+    user_id UUID REFERENCES learningsystem.users(id) ON DELETE CASCADE,
+    skill_name VARCHAR(100),
+    PRIMARY KEY (user_id, skill_name)
+);
+
+-- Use TEXT to accommodate the long Base64 string
+ALTER TABLE learningsystem.student_profiles
+ADD COLUMN profile_picture_base64 TEXT;
+
+-- Update the view to include the Base64 field
+CREATE OR REPLACE VIEW learningsystem.vw_student_profiles AS
+SELECT
+    u.id AS user_id,
+    u.first_name,
+    u.last_name,
+    u.email,
+    sp.major,
+    sp.gpa,
+    sp.work_study_eligible,
+    sp.graduation_year,
+    sp.bio,
+    sp.resume_url,
+    sp.portfolio_url,
+    sp.linkedin_url,
+    sp.github_url,
+    sp.profile_picture_base64 -- The Base64 string
+FROM learningsystem.users u
+JOIN learningsystem.student_profiles sp ON u.id = sp.user_id;
+
 -- Employer specific data
 CREATE TABLE learningsystem.employer_profiles (
     user_id UUID PRIMARY KEY REFERENCES learningsystem.users(id) ON DELETE CASCADE,
@@ -110,6 +149,22 @@ CREATE TABLE learningsystem.workflows (
     action_date TIMESTAMP
 );
 
+CREATE TABLE learningsystem.job_applications (
+    id UUID PRIMARY KEY,
+    job_id UUID NOT NULL,
+    student_id UUID NOT NULL,
+    status VARCHAR(50) DEFAULT 'PENDING',
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Constraints to ensure data integrity
+    CONSTRAINT fk_job FOREIGN KEY (job_id) REFERENCES learningsystem.job_postings(id) ON DELETE CASCADE,
+    CONSTRAINT fk_student FOREIGN KEY (student_id) REFERENCES learningsystem.users(id) ON DELETE CASCADE,
+    -- Prevent duplicate applications for the same job by the same student
+    CONSTRAINT unique_student_job UNIQUE (student_id, job_id)
+);
+
 -- Career Services (Jobs & Events)
 CREATE TABLE learningsystem.job_postings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -122,7 +177,23 @@ CREATE TABLE learningsystem.job_postings (
     deadline DATE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    deleted_at TIMESTAMP
 );
+
+ALTER TABLE learningsystem.job_postings
+ADD COLUMN category VARCHAR(100) DEFAULT 'General';
+
+-- Optional: Update existing jobs to better categories
+UPDATE learningsystem.job_postings SET category = 'Engineering' WHERE title ILIKE '%engineer%';
+UPDATE learningsystem.job_postings SET category = 'Marketing' WHERE title ILIKE '%marketing%';
+
+-- Add the missing recruitment fields
+ALTER TABLE learningsystem.job_postings
+ADD COLUMN salary_range VARCHAR(100),
+ADD COLUMN requirements TEXT;
+
+-- Optional: Add a comment to help other developers
+COMMENT ON COLUMN learningsystem.job_postings.requirements IS 'HTML or Markdown supported list of job prerequisites';
 
 CREATE TABLE learningsystem.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -194,3 +265,37 @@ CREATE TABLE learningsystem.system_configs (
     updated_by UUID REFERENCES learningsystem.users(id)
 );
 
+-- The catalog of available learning content
+CREATE TABLE learningsystem.learning_modules (
+    id UUID PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(50), -- e.g., 'RESUME', 'INTERVIEW'
+    module_type VARCHAR(20), -- e.g., 'VIDEO', 'DOCUMENT'
+    duration_minutes INT,
+    content_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE learningsystem.learning_modules ADD COLUMN weight INT DEFAULT 10;
+-- High Weight: Resume & Direct Outcomes
+UPDATE learningsystem.learning_modules SET weight = 40 WHERE category = 'RESUME';
+UPDATE learningsystem.learning_modules SET weight = 30 WHERE category = 'INTERVIEW';
+
+-- Medium Weight: Networking & Social
+UPDATE learningsystem.learning_modules SET weight = 20 WHERE category = 'SOCIAL';
+UPDATE learningsystem.learning_modules SET weight = 15 WHERE category = 'NETWORKING';
+
+-- Low Weight: FAQs & Minor Documents
+UPDATE learningsystem.learning_modules SET weight = 10 WHERE category = 'EMPLOYMENT';
+
+-- Tracking table for student progress
+CREATE TABLE learningsystem.student_module_completions (
+    student_id UUID NOT NULL,
+    module_id UUID NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, module_id),
+    CONSTRAINT fk_student FOREIGN KEY (student_id) REFERENCES learningsystem.users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_module FOREIGN KEY (module_id) REFERENCES learningsystem.learning_modules(id) ON DELETE CASCADE
+);

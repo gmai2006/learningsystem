@@ -5,7 +5,7 @@ import java.util.UUID;
 
 /** Entity representing extended profile data for Employers. Linked 1:1 with the User entity. */
 @Entity
-@Table(name = "employer_profiles", schema = "learningsystem")
+@Table(name = "employer_profiles")
 public class EmployerProfile {
 
     @Id

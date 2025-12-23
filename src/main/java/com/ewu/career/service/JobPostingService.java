@@ -3,6 +3,8 @@ package com.ewu.career.service;
 import com.ewu.career.dao.JobPostingDao;
 import com.ewu.career.dao.StudentProfileDao;
 import com.ewu.career.dao.SystemConfigDao;
+import com.ewu.career.dto.EmployerJobViewDTO;
+import com.ewu.career.dto.StudentProfileDTO;
 import com.ewu.career.entity.*;
 import com.ewu.career.interceptor.AuditAction;
 import jakarta.ejb.Stateless;
@@ -27,6 +29,10 @@ public class JobPostingService {
 
     @Inject private SystemConfigDao configDao;
 
+    public List<EmployerJobViewDTO> getEmployerView(UUID employerId, User actor) {
+        return jobPostingDao.getEmployerView(employerId);
+    }
+
     /**
      * Retrieves job postings filtered by student eligibility. If the actor is a student, the list
      * is restricted based on their Banner-synced status.
@@ -40,8 +46,8 @@ public class JobPostingService {
         }
 
         // Fetch student's academic profile for Work Study status
-        StudentProfile profile = studentProfileDao.find(actor.getId());
-        boolean isWorkStudyEligible = (profile != null && profile.getIsWorkStudyEligible());
+        StudentProfileDTO profile = studentProfileDao.findByUserId(actor.getId());
+        boolean isWorkStudyEligible = (profile != null && profile.workStudyEligible());
 
         return jobPostingDao.findEligibleJobs(isWorkStudyEligible);
     }

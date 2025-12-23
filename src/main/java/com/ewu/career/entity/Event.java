@@ -10,7 +10,7 @@ import java.util.UUID;
  * via TouchNet integration.
  */
 @Entity
-@Table(name = "events", schema = "learningsystem")
+@Table(name = "events")
 public class Event {
 
     @Id

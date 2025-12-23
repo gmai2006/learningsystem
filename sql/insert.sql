@@ -422,3 +422,47 @@ SELECT
     type_specific_data->>'total_hours' as hours,
     type_specific_data->>'is_paid' as paid
 FROM learningsystem.applied_learning_experiences;
+
+INSERT INTO learningsystem.learning_modules
+(id, title, description, category, module_type, duration_minutes, content_url, is_active)
+VALUES
+-- Module 1: Resume Building
+('3a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
+ 'The Eagle Resume Framework',
+ 'Learn how to structure your resume specifically for EWU handshake and regional employers. Includes action-verb strategies.',
+ 'RESUME', 'DOCUMENT', 15, 'https://silo.ewu.edu/resources/resume-framework.pdf', true),
+
+-- Module 2: Interview Prep
+('4b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e',
+ 'STAR Method Interviewing',
+ 'A deep dive into Situational, Task, Action, and Result (STAR) techniques for behavioral interviews.',
+ 'INTERVIEW', 'VIDEO', 12, 'https://silo.ewu.edu/learning/star-method-video', true),
+
+-- Module 3: Social Media / LinkedIn
+('5c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f',
+ 'LinkedIn Profile Optimization',
+ 'How to attract recruiters in the Pacific Northwest by optimizing your headline, summary, and EWU alumni connections.',
+ 'SOCIAL', 'INTERACTIVE', 20, 'https://silo.ewu.edu/interactive/linkedin-guide', true),
+
+-- Module 4: Networking
+('6d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8a',
+ 'Networking 101: The Elevator Pitch',
+ 'Construct a 30-second professional introduction for career fairs and networking events.',
+ 'NETWORKING', 'VIDEO', 8, 'https://silo.ewu.edu/learning/elevator-pitch-mastery', true),
+
+-- Module 5: Federal Work Study
+('7e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b',
+ 'Navigating Work Study at EWU',
+ 'A guide for students eligible for Federal Work Study. Learn how to verify your status and apply for campus-specific roles.',
+ 'EMPLOYMENT', 'DOCUMENT', 10, 'https://silo.ewu.edu/resources/work-study-faq.pdf', true);
+
+ -- High Weight: Resume & Direct Outcomes
+ UPDATE learningsystem.learning_modules SET weight = 40 WHERE category = 'RESUME';
+ UPDATE learningsystem.learning_modules SET weight = 30 WHERE category = 'INTERVIEW';
+
+ -- Medium Weight: Networking & Social
+ UPDATE learningsystem.learning_modules SET weight = 20 WHERE category = 'SOCIAL';
+ UPDATE learningsystem.learning_modules SET weight = 15 WHERE category = 'NETWORKING';
+
+ -- Low Weight: FAQs & Minor Documents
+ UPDATE learningsystem.learning_modules SET weight = 10 WHERE category = 'EMPLOYMENT';

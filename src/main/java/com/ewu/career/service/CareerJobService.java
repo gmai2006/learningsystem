@@ -2,8 +2,8 @@ package com.ewu.career.service;
 
 import com.ewu.career.dao.JobPostingDao;
 import com.ewu.career.dao.StudentProfileDao;
+import com.ewu.career.dto.StudentProfileDTO;
 import com.ewu.career.entity.JobPosting;
-import com.ewu.career.entity.StudentProfile;
 import com.ewu.career.entity.User;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
@@ -23,8 +23,8 @@ public class CareerJobService {
             return jobDao.findEligibleJobs(false); // Default to non-work study for others
         }
 
-        StudentProfile profile = profileDao.find(actor.getId());
-        boolean isEligible = (profile != null && profile.getIsWorkStudyEligible());
+        StudentProfileDTO profile = profileDao.findByUserId(actor.getId());
+        boolean isEligible = (profile != null && profile.workStudyEligible());
 
         return jobDao.findEligibleJobs(isEligible);
     }
