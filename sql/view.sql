@@ -1,3 +1,4 @@
+-- Update the view to include the Base64 field
 CREATE OR REPLACE VIEW learningsystem.vw_student_profiles AS
 SELECT
     u.id AS user_id,
@@ -12,6 +13,7 @@ SELECT
     sp.resume_url,
     sp.portfolio_url,
     sp.linkedin_url,
-    sp.github_url
+    sp.github_url,
+    sp.profile_picture_base64 -- The Base64 string
 FROM learningsystem.users u
-JOIN learningsystem.student_profiles sp ON u.id = sp.user_id;
+         JOIN learningsystem.student_profiles sp ON u.id = sp.user_id;

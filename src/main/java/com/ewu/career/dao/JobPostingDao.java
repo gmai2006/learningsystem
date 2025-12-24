@@ -53,20 +53,23 @@ public class JobPostingDao {
                 ((java.sql.Date) row[11]).toLocalDate());
     }
 
-    public List<EmployerJobViewDTO> getEmployerView(UUID employerId) {
-        // We join the applications and group by the posting ID to get counts
-        String jpql =
-                "SELECT new com.ewu.career.dto.EmployerJobViewDTO(p.id, p.title, p.location,"
-                    + " p.fundingSource, p.deadline, p.isActive, COUNT(a)) FROM JobPosting p LEFT"
-                    + " JOIN JobApplication a ON a.jobId = p.id WHERE p.employerId = :eid GROUP BY"
-                    + " p.id, p.title, p.location, p.fundingSource, p.deadline, p.isActive ORDER BY"
-                    + " p.createdAt DESC";
-
-        return jpa.getEntityManager()
-                .createQuery(jpql, EmployerJobViewDTO.class)
-                .setParameter("eid", employerId)
-                .getResultList();
-    }
+    //    public List<EmployerJobViewDTO> getEmployerView(UUID employerId) {
+    //        // We join the applications and group by the posting ID to get counts
+    //        String jpql =
+    //                "SELECT new com.ewu.career.dto.EmployerJobViewDTO(p.id, p.title, p.location,"
+    //                    + " p.fundingSource, p.deadline, p.isActive, COUNT(a)) FROM JobPosting p
+    // LEFT"
+    //                    + " JOIN JobApplication a ON a.jobId = p.id WHERE p.employerId = :eid
+    // GROUP BY"
+    //                    + " p.id, p.title, p.location, p.fundingSource, p.deadline, p.isActive
+    // ORDER BY"
+    //                    + " p.createdAt DESC";
+    //
+    //        return jpa.getEntityManager()
+    //                .createQuery(jpql, EmployerJobViewDTO.class)
+    //                .setParameter("eid", employerId)
+    //                .getResultList();
+    //    }
 
     /** Retrieves a specific job posting by its unique ID. */
     public JobPosting find(UUID id) {

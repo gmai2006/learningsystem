@@ -120,11 +120,11 @@ public class JobPosting {
         this.fundingSource = fundingSource;
     }
 
-    public boolean isOnCampus() {
+    public boolean getIsOnCampus() {
         return isOnCampus;
     }
 
-    public void setOnCampus(boolean onCampus) {
+    public void setIsOnCampus(boolean onCampus) {
         isOnCampus = onCampus;
     }
 
@@ -136,11 +136,11 @@ public class JobPosting {
         this.deadline = deadline;
     }
 
-    public boolean isActive() {
+    public boolean getIsActive() {
         return isActive;
     }
 
-    public void setActive(boolean active) {
+    public void setIsActive(boolean active) {
         isActive = active;
     }
 

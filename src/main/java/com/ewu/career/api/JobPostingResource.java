@@ -2,7 +2,6 @@ package com.ewu.career.api;
 
 import com.ewu.career.api.security.AuthContext;
 import com.ewu.career.dao.JobApplicationDao;
-import com.ewu.career.dto.EmployerJobViewDTO;
 import com.ewu.career.dto.JobFilters;
 import com.ewu.career.dto.JobPostingDTO;
 import com.ewu.career.entity.JobPosting;
@@ -30,27 +29,27 @@ public class JobPostingResource {
     /** Inject the current authenticated user. */
     @Inject AuthContext authContext;
 
-    @GET
-    @Path("/employer-view")
-    public Response getJobsForEmployer() {
-        if (authContext.getActor() == null) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("Authentication required.")
-                    .build();
-        }
-
-        if (authContext.getActor().getRole() != UserRole.EMPLOYER) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity("Access denied: Insufficient privileges for global oversight.")
-                    .build();
-        }
-
-        // Security: Only fetch jobs belonging to the logged-in employer
-        UUID employerId = authContext.getActor().getId();
-        List<EmployerJobViewDTO> jobs =
-                jobPostingService.getEmployerView(employerId, authContext.getActor());
-        return Response.ok(jobs).build();
-    }
+    //    @GET
+    //    @Path("/employer-view")
+    //    public Response getJobsForEmployer() {
+    //        if (authContext.getActor() == null) {
+    //            return Response.status(Response.Status.UNAUTHORIZED)
+    //                    .entity("Authentication required.")
+    //                    .build();
+    //        }
+    //
+    //        if (authContext.getActor().getRole() != UserRole.EMPLOYER) {
+    //            return Response.status(Response.Status.FORBIDDEN)
+    //                    .entity("Access denied: Insufficient privileges for global oversight.")
+    //                    .build();
+    //        }
+    //
+    //        // Security: Only fetch jobs belonging to the logged-in employer
+    //        UUID employerId = authContext.getActor().getId();
+    //        List<EmployerJobViewDTO> jobs =
+    //                jobPostingService.getEmployerView(employerId, authContext.getActor());
+    //        return Response.ok(jobs).build();
+    //    }
 
     /**
      * Retrieves a specialized view of job postings for students. Includes the 'isApplied' status

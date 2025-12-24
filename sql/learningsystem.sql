@@ -32,47 +32,34 @@ CREATE TABLE learningsystem.student_profiles (
     work_study_eligible BOOLEAN DEFAULT FALSE, -- Critical for filtering jobs [cite: 81-82]
     graduation_year INT,
     resume_url TEXT, -- Link to stored file
-    portfolio_url TEXT -- Student career portfolio [cite: 97]
+    portfolio_url, TEXT -- Student career portfolio [cite: 97]
+    bio TEXT,
+    linkedin_url TEXT,
+    github_url TEXT,
+    profile_verified BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    profile_picture_base64 TEXT;
 );
 
-ALTER TABLE learningsystem.student_profiles
-    ADD COLUMN bio TEXT,
-    ADD COLUMN linkedin_url TEXT,
-    ADD COLUMN github_url TEXT,
-    ADD COLUMN profile_verified BOOLEAN DEFAULT FALSE,
-    ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+-- ALTER TABLE learningsystem.student_profiles
+--     ADD COLUMN bio TEXT,
+--     ADD COLUMN linkedin_url TEXT,
+--     ADD COLUMN github_url TEXT,
+--     ADD COLUMN profile_verified BOOLEAN DEFAULT FALSE,
+--     ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Use TEXT to accommodate the long Base64 string
+-- ALTER TABLE learningsystem.student_profiles
+--     ADD COLUMN profile_picture_base64 TEXT;
 
 -- Skills are best handled in a separate 'join' table to allow
 -- for easy searching/filtering by employers.
+
 CREATE TABLE learningsystem.student_skills (
     user_id UUID REFERENCES learningsystem.users(id) ON DELETE CASCADE,
     skill_name VARCHAR(100),
     PRIMARY KEY (user_id, skill_name)
 );
-
--- Use TEXT to accommodate the long Base64 string
-ALTER TABLE learningsystem.student_profiles
-ADD COLUMN profile_picture_base64 TEXT;
-
--- Update the view to include the Base64 field
-CREATE OR REPLACE VIEW learningsystem.vw_student_profiles AS
-SELECT
-    u.id AS user_id,
-    u.first_name,
-    u.last_name,
-    u.email,
-    sp.major,
-    sp.gpa,
-    sp.work_study_eligible,
-    sp.graduation_year,
-    sp.bio,
-    sp.resume_url,
-    sp.portfolio_url,
-    sp.linkedin_url,
-    sp.github_url,
-    sp.profile_picture_base64 -- The Base64 string
-FROM learningsystem.users u
-JOIN learningsystem.student_profiles sp ON u.id = sp.user_id;
 
 -- Employer specific data
 CREATE TABLE learningsystem.employer_profiles (
@@ -195,6 +182,32 @@ ADD COLUMN requirements TEXT;
 -- Optional: Add a comment to help other developers
 COMMENT ON COLUMN learningsystem.job_postings.requirements IS 'HTML or Markdown supported list of job prerequisites';
 
+CREATE TABLE learningsystem.interviews (
+                                           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                           application_id UUID NOT NULL REFERENCES learningsystem.job_applications(id) ON DELETE CASCADE,
+
+    -- Schedule Details
+                                           scheduled_at TIMESTAMP NOT NULL,
+                                           duration_minutes INT DEFAULT 30,
+
+    -- Format & Logistics
+                                           is_virtual BOOLEAN DEFAULT TRUE,
+                                           meeting_url TEXT, -- For Zoom, Teams, or Google Meet links
+                                           location_notes TEXT, -- Office room number or physical address
+
+    -- Status & Tracking
+                                           status VARCHAR(50) DEFAULT 'SCHEDULED', -- e.g., 'SCHEDULED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED'
+                                           interviewer_notes TEXT, -- Private notes for the employer post-interview
+
+    -- Metadata
+                                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexing for performance
+CREATE INDEX idx_interviews_application_id ON learningsystem.interviews(application_id);
+CREATE INDEX idx_interviews_scheduled_at ON learningsystem.interviews(scheduled_at);
+
 CREATE TABLE learningsystem.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organizer_id UUID REFERENCES learningsystem.users(id),
@@ -299,3 +312,16 @@ CREATE TABLE learningsystem.student_module_completions (
     CONSTRAINT fk_student FOREIGN KEY (student_id) REFERENCES learningsystem.users(id) ON DELETE CASCADE,
     CONSTRAINT fk_module FOREIGN KEY (module_id) REFERENCES learningsystem.learning_modules(id) ON DELETE CASCADE
 );
+
+CREATE TABLE learningsystem.notification_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES learningsystem.job_applications(id) ON DELETE CASCADE,
+  recipient_email VARCHAR(255) NOT NULL,
+  subject VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  notification_type VARCHAR(50) NOT NULL, -- e.g., 'INTERVIEW_INVITATION', 'REJECTION'
+  sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for fast lookup when viewing a specific application's history
+CREATE INDEX idx_notification_logs_app_id ON learningsystem.notification_logs(application_id);

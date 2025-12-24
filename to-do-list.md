@@ -23,3 +23,9 @@ Would you like me to update the StudentJobBoard.jsx to include a filter sidebar 
 Would you like me to create the JobDetailsModal.jsx for students that displays the full description, requirements, and salary?
 
 Would you like me to build a "Skill Matcher" service in Java that finds qualified students whenever a new job is posted?
+
+Would you like me to add a "Skills Breakdown" to this page that shows which specific skills from the student profiles are most common among the current pool of applicants?
+
+Would you like me to create a "Scheduler" component that allows the employer to pick a date and time for the interview when they change the status?
+
+Would you like me to implement the "Reschedule" logic so employers can update the scheduled_at time directly from the interview dashboard?

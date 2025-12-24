@@ -3,7 +3,6 @@ package com.ewu.career.service;
 import com.ewu.career.dao.JobPostingDao;
 import com.ewu.career.dao.StudentProfileDao;
 import com.ewu.career.dao.SystemConfigDao;
-import com.ewu.career.dto.EmployerJobViewDTO;
 import com.ewu.career.dto.StudentProfileDTO;
 import com.ewu.career.entity.*;
 import com.ewu.career.interceptor.AuditAction;
@@ -29,9 +28,9 @@ public class JobPostingService {
 
     @Inject private SystemConfigDao configDao;
 
-    public List<EmployerJobViewDTO> getEmployerView(UUID employerId, User actor) {
-        return jobPostingDao.getEmployerView(employerId);
-    }
+    //    public List<EmployerJobViewDTO> getEmployerView(UUID employerId, User actor) {
+    //        return jobPostingDao.getEmployerView(employerId);
+    //    }
 
     /**
      * Retrieves job postings filtered by student eligibility. If the actor is a student, the list
@@ -81,7 +80,7 @@ public class JobPostingService {
 
         boolean approvalNeeded = configDao.getBooleanValue("JOB_APPROVAL_REQUIRED");
         if (approvalNeeded && actor.getRole() == UserRole.EMPLOYER) {
-            job.setActive(false); // Force pending status for vetting
+            job.setIsActive(false); // Force pending status for vetting
         }
         return jobPostingDao.create(job);
     }
@@ -105,9 +104,19 @@ public class JobPostingService {
 
     /** Toggles job visibility (Active/Inactive). */
     public void setJobStatus(User actor, UUID jobId, boolean isActive) {
+        JobPosting existing = jobPostingDao.find(jobId);
+
+        boolean isOwner = actor.getId().equals(existing.getEmployerId());
+        boolean isStaff = "STAFF".equals(actor.getRole().name());
+
+        if (!isOwner && !isStaff) {
+            throw new SecurityException(
+                    "Forbidden: You do not have permission to edit this posting.");
+        }
+
         JobPosting job = jobPostingDao.find(jobId);
         if (job != null) {
-            job.setActive(isActive);
+            job.setIsActive(isActive);
             updateJob(actor, job);
         }
     }
