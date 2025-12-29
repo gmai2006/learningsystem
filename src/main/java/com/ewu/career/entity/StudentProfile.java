@@ -40,6 +40,17 @@ public class StudentProfile {
 
     @Transient private Set<String> skills;
 
+    @Column(name = "is_ferpa_restricted")
+    private boolean isFerpaRestricted = false;
+
+    public boolean isGetFerpaRestricted() {
+        return isFerpaRestricted;
+    }
+
+    public void setIsFerpaRestricted(boolean ferpaRestricted) {
+        isFerpaRestricted = ferpaRestricted;
+    }
+
     public UUID getUserId() {
         return userId;
     }

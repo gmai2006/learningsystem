@@ -7,9 +7,9 @@ import com.ewu.career.entity.AppliedLearningExperience;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -21,7 +21,6 @@ public class StudentDashboardDao {
 
     @Inject private LearningDao learningDao;
 
-    @Transactional
     public StudentDashboardSummary getSummary(UUID studentId) {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
 
@@ -113,6 +112,25 @@ public class StudentDashboardDao {
                 tierName,
                 tierColor,
                 milestones);
+    }
+
+    public Map<String, Object> getStudentVolunteerImpact(UUID studentId) {
+        String sql =
+                "SELECT COALESCE(SUM(j.service_hours), 0), COUNT(a.id) "
+                        + "FROM learningsystem.job_applications a "
+                        + "JOIN learningsystem.job_postings j ON a.job_id = j.id "
+                        + "WHERE a.student_id = :sid AND a.status = 'COMPLETED'";
+
+        Object[] result =
+                (Object[])
+                        jpa.getEntityManager()
+                                .createNativeQuery(sql)
+                                .setParameter("sid", studentId)
+                                .getSingleResult();
+
+        return Map.of(
+                "totalHours", ((Number) result[0]).intValue(),
+                "projectCount", ((Number) result[1]).longValue());
     }
 
     private ExperienceMilestone mapToMilestone(AppliedLearningExperience e) {

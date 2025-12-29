@@ -18,6 +18,7 @@ public class JobPostingDTO {
     private LocalDateTime createdAt;
     private boolean onCampus;
     private boolean isApplied;
+    private int serviceHours;
 
     //    String requirements;
     //    String salaryRange;
@@ -34,7 +35,8 @@ public class JobPostingDTO {
             LocalDate deadline,
             LocalDateTime createdAt,
             boolean onCampus,
-            boolean isApplied) {
+            boolean isApplied,
+            int serviceHours) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -44,6 +46,7 @@ public class JobPostingDTO {
         this.createdAt = createdAt;
         this.onCampus = onCampus;
         this.isApplied = isApplied;
+        this.serviceHours = serviceHours;
     }
 
     // Standard Getters and Setters
@@ -85,5 +88,9 @@ public class JobPostingDTO {
 
     public void setApplied(boolean applied) {
         isApplied = applied;
+    }
+
+    public int getServiceHours() {
+        return serviceHours;
     }
 }

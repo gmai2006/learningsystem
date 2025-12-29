@@ -1,10 +1,9 @@
 package com.ewu.career.dao;
 
 import com.ewu.career.dao.core.JpaDao;
-import com.ewu.career.dto.JobApplicationDTO;
 import com.ewu.career.dto.JobFilters;
-import com.ewu.career.dto.JobPostingDTO;
 import com.ewu.career.entity.JobApplication;
+import com.ewu.career.entity.JobOversightView;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -42,57 +41,140 @@ public class JobApplicationDao {
     }
 
     /**
-     * Fetches applications for a specific student, joining with JobPosting to provide the actual
-     * titles and locations.
+     * Fetches applications for a specific student using the unified JobOversightView. This provides
+     * rich data including company details and learning objectives without manual DTO mapping.
      */
-    public List<JobApplicationDTO> findByStudentId(UUID studentId) {
+    public List<JobOversightView> findByStudentId(UUID studentId) {
+        // We select from the View where the studentId matches.
+        // Because the view is a LEFT JOIN, filtering by studentId effectively
+        // returns only the jobs that THIS specific student has applied for.
         String jpql =
-                "SELECT new com.ewu.career.dto.JobApplicationDTO("
-                        + "a.id, a.jobId, p.title, p.location, a.status, a.notes, "
-                        + "a.createdAt, p.isActive, p.description, p.fundingSource) "
-                        + // Map the active status here
-                        "FROM JobApplication a "
-                        + "JOIN JobPosting p ON a.jobId = p.id "
-                        + "WHERE a.studentId = :sid "
-                        + "ORDER BY a.createdAt DESC";
+                "SELECT v FROM JobOversightView v "
+                        + "WHERE v.studentId = :sid "
+                        + "ORDER BY v.appliedAt DESC";
 
         return jpa.getEntityManager()
-                .createQuery(jpql, JobApplicationDTO.class)
+                .createQuery(jpql, JobOversightView.class)
                 .setParameter("sid", studentId)
                 .getResultList();
     }
 
-    @Transactional
-    public List<JobPostingDTO> getStudentJobView(UUID studentId, JobFilters filters) {
-        // 1. Base Query with the Constructor Expression
-        // The subquery (SELECT count(a) > 0...) maps to the 'isApplied' boolean in the DTO
+    public List<JobOversightView> getStudentJobView(UUID studentId, JobFilters filters) {
         StringBuilder jpql =
                 new StringBuilder(
-                        "SELECT new com.ewu.career.dto.JobPostingDTO(p.id, p.title, p.description,"
-                            + " p.location, p.fundingSource, p.deadline, p.createdAt, p.isOnCampus,"
-                            + " (SELECT count(a) > 0 FROM JobApplication a WHERE a.jobId = p.id AND"
-                            + " a.studentId = :sid)) FROM JobPosting p WHERE p.isActive = true AND"
-                            + " p.deletedAt IS NULL ");
+                        "SELECT v FROM JobOversightView v "
+                                + "WHERE v.isActive = true AND v.jobDeletedAt IS NULL ");
 
         // 2. Dynamically Append Filters
         if (filters.getSearch() != null && !filters.getSearch().isEmpty()) {
             jpql.append(
-                    "AND (lower(p.title) LIKE lower(:search) OR lower(p.description) LIKE"
-                            + " lower(:search)) ");
+                    "AND (lower(v.jobTitle) LIKE lower(:search) "
+                            + "OR lower(v.companyName) LIKE lower(:search) "
+                            + "OR lower(v.location) LIKE lower(:search)) ");
+        }
+
+        if (filters.getFundingSource() != null && !filters.getFundingSource().isEmpty()) {
+            jpql.append("AND v.fundingSource = :funding ");
+        }
+
+        if (filters.getOnCampus() != null) {
+            jpql.append("AND v.isOnCampus = :onCampus ");
+        }
+
+        // 3. Create Query and Bind Parameters
+        var query = jpa.getEntityManager().createQuery(jpql.toString(), JobOversightView.class);
+
+        // 4. Parameter Binding
+        if (filters.getSearch() != null && !filters.getSearch().isEmpty()) {
+            query.setParameter("search", "%" + filters.getSearch() + "%");
         }
         if (filters.getFundingSource() != null && !filters.getFundingSource().isEmpty()) {
-            jpql.append("AND p.fundingSource = :funding ");
+            query.setParameter("funding", filters.getFundingSource());
         }
         if (filters.getOnCampus() != null) {
-            jpql.append("AND p.isOnCampus = :onCampus ");
+            query.setParameter("onCampus", filters.getOnCampus());
+        }
+
+        return query.getResultList();
+    }
+
+    public List<JobOversightView> getStudentApplicationView(UUID studentId, JobFilters filters) {
+        // 1. Base Query using the Immutable Entity
+        StringBuilder jpql =
+                new StringBuilder("SELECT v FROM JobOversightView v WHERE v.studentId = :sid ");
+
+        // 2. Dynamically Append Filters based on the View's fields
+        if (filters.getSearch() != null && !filters.getSearch().isEmpty()) {
+            jpql.append(
+                    "AND (lower(v.jobTitle) LIKE lower(:search) "
+                            + "OR lower(v.companyName) LIKE lower(:search)) ");
+        }
+
+        if (filters.getFundingSource() != null && !filters.getFundingSource().isEmpty()) {
+            jpql.append("AND v.fundingSource = :funding ");
+        }
+
+        if (filters.getOnCampus() != null) {
+            jpql.append("AND v.isOnCampus = :onCampus ");
+        }
+
+        // Sort by most recent application
+        jpql.append("ORDER BY v.appliedAt DESC");
+
+        // 3. Create Query and Bind Parameters
+        var query =
+                jpa.getEntityManager()
+                        .createQuery(jpql.toString(), JobOversightView.class)
+                        .setParameter("sid", studentId);
+
+        if (filters.getSearch() != null && !filters.getSearch().isEmpty()) {
+            query.setParameter("search", "%" + filters.getSearch() + "%");
+        }
+        if (filters.getFundingSource() != null && !filters.getFundingSource().isEmpty()) {
+            query.setParameter("funding", filters.getFundingSource());
+        }
+        if (filters.getOnCampus() != null) {
+            query.setParameter("onCampus", filters.getOnCampus());
+        }
+
+        return query.getResultList();
+    }
+
+    public List<JobOversightView> getStudentVolunteerJobView(UUID studentId, JobFilters filters) {
+        // 1. Query the JobOversightView entity directly.
+        // Logic: Filter by 'Volunteer' category and ensure the student sees
+        // their specific application record OR the vacant posting (studentId IS NULL).
+        StringBuilder jpql =
+                new StringBuilder(
+                        "SELECT v FROM JobOversightView v "
+                                + "WHERE v.category = 'Volunteer' "
+                                + "AND v.isActive = true "
+                                + "AND v.jobDeletedAt IS NULL "
+                                + "AND (v.studentId = :sid OR v.studentId IS NULL) ");
+
+        // 2. Dynamically Append Filters
+        if (filters.getSearch() != null && !filters.getSearch().isEmpty()) {
+            jpql.append(
+                    "AND (lower(v.jobTitle) LIKE lower(:search) "
+                            + "OR lower(v.companyName) LIKE lower(:search) "
+                            + "OR lower(v.location) LIKE lower(:search)) ");
+        }
+
+        if (filters.getFundingSource() != null && !filters.getFundingSource().isEmpty()) {
+            jpql.append("AND v.fundingSource = :funding ");
+        }
+
+        if (filters.getOnCampus() != null) {
+            jpql.append("AND v.isOnCampus = :onCampus ");
         }
 
         // 3. Create Query and Bind Parameters
         var query =
                 jpa.getEntityManager()
-                        .createQuery(jpql.toString(), JobPostingDTO.class)
+                        .createQuery(jpql.toString(), JobOversightView.class)
                         .setParameter("sid", studentId);
 
+        // 4. Parameter Binding
         if (filters.getSearch() != null && !filters.getSearch().isEmpty()) {
             query.setParameter("search", "%" + filters.getSearch() + "%");
         }
@@ -147,23 +229,21 @@ public class JobApplicationDao {
     /** Updates the status of an application (e.g., from PENDING to REVIEWING). */
     @Transactional
     public void updateStatus(UUID applicationId, String newStatus) {
-        jpa.getEntityManager()
-                .createQuery("UPDATE JobApplication a SET a.status = :status WHERE a.id = :id")
-                .setParameter("status", newStatus)
-                .setParameter("id", applicationId)
-                .executeUpdate();
+        final JobApplication application = jpa.find(JobApplication.class, applicationId);
+        application.setStatus(newStatus);
+        jpa.update(application);
     }
 
     /**
      * Finds all applications for a specific job posting. Used by Employers/Staff to review
      * candidates.
      */
-    public List<JobApplication> findByJobId(UUID jobId) {
+    public List<JobOversightView> findByJobId(UUID jobId) {
         return jpa.getEntityManager()
                 .createQuery(
-                        "SELECT a FROM JobApplication a WHERE a.jobId = :jid ORDER BY a.createdAt"
+                        "SELECT a FROM JobOversightView a WHERE a.jobId = :jid ORDER BY a.createdAt"
                                 + " ASC",
-                        JobApplication.class)
+                        JobOversightView.class)
                 .setParameter("jid", jobId)
                 .getResultList();
     }

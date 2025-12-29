@@ -9,7 +9,7 @@ public class EventRegistration {
     @EmbeddedId private EventRegistrationId id;
 
     @Column(name = "payment_status")
-    private String paymentStatus;
+    private String paymentStatus; // PAID, PENDING, WAIVED
 
     @Column(name = "checked_in")
     private Boolean checkedIn = false;

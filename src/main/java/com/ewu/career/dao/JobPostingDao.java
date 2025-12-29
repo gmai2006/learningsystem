@@ -2,6 +2,7 @@ package com.ewu.career.dao;
 
 import com.ewu.career.dao.core.JpaDao;
 import com.ewu.career.dto.EmployerJobViewDTO;
+import com.ewu.career.entity.JobOversightView;
 import com.ewu.career.entity.JobPosting;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
@@ -20,6 +21,32 @@ public class JobPostingDao {
     @Inject
     @Named("DefaultJpaDao")
     private JpaDao jpa;
+
+    public List<JobOversightView> findPlacementsByStatus(String status, String category) {
+        return jpa.getEntityManager()
+                .createQuery(
+                        "SELECT v FROM JobOversightView v WHERE v.category = :cat AND"
+                                + " v.applicationStatus = :stat",
+                        JobOversightView.class)
+                .setParameter("cat", category)
+                .setParameter("stat", status)
+                .getResultList();
+    }
+
+    //    /** Retrieves DTOs from the internship view. */
+    //    public List<InternshipOversightView> findPracticumsByStatus(String status, String
+    // category) {
+    //        String jpql =
+    //                "SELECT v FROM InternshipOversightView v "
+    //                        + "WHERE v.category = :cat AND v.applicationStatus = :stat "
+    //                        + "ORDER BY v.appliedAt DESC";
+    //
+    //        return jpa.getEntityManager()
+    //                .createQuery(jpql, InternshipOversightView.class)
+    //                .setParameter("cat", category)
+    //                .setParameter("stat", status)
+    //                .getResultList();
+    //    }
 
     public EmployerJobViewDTO getEmployerJobDetailView(UUID jobId, UUID employerId) {
 
@@ -53,24 +80,6 @@ public class JobPostingDao {
                 ((java.sql.Date) row[11]).toLocalDate());
     }
 
-    //    public List<EmployerJobViewDTO> getEmployerView(UUID employerId) {
-    //        // We join the applications and group by the posting ID to get counts
-    //        String jpql =
-    //                "SELECT new com.ewu.career.dto.EmployerJobViewDTO(p.id, p.title, p.location,"
-    //                    + " p.fundingSource, p.deadline, p.isActive, COUNT(a)) FROM JobPosting p
-    // LEFT"
-    //                    + " JOIN JobApplication a ON a.jobId = p.id WHERE p.employerId = :eid
-    // GROUP BY"
-    //                    + " p.id, p.title, p.location, p.fundingSource, p.deadline, p.isActive
-    // ORDER BY"
-    //                    + " p.createdAt DESC";
-    //
-    //        return jpa.getEntityManager()
-    //                .createQuery(jpql, EmployerJobViewDTO.class)
-    //                .setParameter("eid", employerId)
-    //                .getResultList();
-    //    }
-
     /** Retrieves a specific job posting by its unique ID. */
     public JobPosting find(UUID id) {
         return jpa.find(JobPosting.class, id);
@@ -85,9 +94,9 @@ public class JobPostingDao {
         return jpa.selectAll(query, JobPosting.class);
     }
 
-    public List<JobPosting> findAllPostings() {
-        String query = "SELECT j FROM JobPosting j WHERE j.isActive = true ";
-        return jpa.selectAll(query, JobPosting.class);
+    public List<JobOversightView> findAllPostings() {
+        String query = "SELECT j FROM JobOversightView j WHERE j.isActive = true ";
+        return jpa.selectAll(query, JobOversightView.class);
     }
 
     /**

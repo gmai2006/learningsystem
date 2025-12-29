@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.transaction.Transactional;
 
@@ -84,8 +85,36 @@ public class EmployerDashboardDao {
         // 5. Fetch Recent Activity Feed
         List<RecentActivityDTO> activity = fetchRecentActivity(employerId);
 
+        Map<String, Object> hiringStats = getHiringStats(employerId);
+
         return new EmployerDashboardSummary(
-                activeJobs, totalPending, companyName, pipelines, activity);
+                activeJobs,
+                totalPending,
+                companyName,
+                (Integer) hiringStats.get("totalPlacements"),
+                (Long) hiringStats.get("avgDaysToHire"),
+                pipelines,
+                activity);
+    }
+
+    public Map<String, Object> getHiringStats(UUID employerId) {
+        String sql =
+                "SELECT COUNT(CASE WHEN a.status = 'HIRED' THEN 1 END) as total_placements,"
+                        + " AVG(CASE WHEN a.status = 'HIRED' THEN EXTRACT(DAY FROM (a.updated_at -"
+                        + " j.created_at)) END) as avg_days FROM learningsystem.job_postings j LEFT"
+                        + " JOIN learningsystem.job_applications a ON j.id = a.job_id WHERE"
+                        + " j.employer_id = :eid";
+
+        Object[] row =
+                (Object[])
+                        jpa.getEntityManager()
+                                .createNativeQuery(sql)
+                                .setParameter("eid", employerId)
+                                .getSingleResult();
+
+        return Map.of(
+                "totalPlacements", row[0] != null ? ((Number) row[0]).intValue() : 0,
+                "avgDaysToHire", row[1] != null ? Math.round(((Number) row[1]).doubleValue()) : 0);
     }
 
     public List<JobPipelineDTO> getActivePipelines(UUID employerId) {
@@ -245,7 +274,7 @@ public class EmployerDashboardDao {
                 "SELECT a.id, u.first_name || ' ' || u.last_name as student_name, u.email, "
                         + "sp.major, sp.gpa, sp.graduation_year, sp.bio, sp.resume_url, "
                         + "sp.portfolio_url, sp.linkedin_url, sp.github_url, "
-                        + "sp.profile_picture_base64, a.status, j.title "
+                        + "sp.profile_picture_base64, a.status, j.title, a.student_id "
                         + "FROM learningsystem.job_applications a "
                         + "JOIN learningsystem.users u ON a.student_id = u.id "
                         + "JOIN learningsystem.student_profiles sp ON u.id = sp.user_id "
@@ -274,8 +303,8 @@ public class EmployerDashboardDao {
                 (String) row[10], // githubUrl
                 (String) row[11], // profilePicture
                 (String) row[12], // status
-                (String) row[13] // jobTitle
-                );
+                (String) row[13], // jobTitle
+                (UUID) row[14]);
     }
 
     public String getResumeUrlIfAuthorized(UUID employerId, UUID applicationId) {

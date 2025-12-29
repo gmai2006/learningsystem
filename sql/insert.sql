@@ -466,3 +466,271 @@ VALUES
 
  -- Low Weight: FAQs & Minor Documents
  UPDATE learningsystem.learning_modules SET weight = 10 WHERE category = 'EMPLOYMENT';
+
+-- 1. On-Campus Peer Mentoring
+INSERT INTO learningsystem.job_postings (
+    id, employer_id, title, description, location,
+    category, salary_range, requirements, funding_source,
+    is_on_campus, deadline, is_active, created_at
+) VALUES (
+             gen_random_uuid(),
+             '753d7730-5d88-45a3-a5a7-bf7c3cfa643e', -- Replace with a valid employer UUID
+             'Eagle Peer Mentor',
+             'Help incoming freshmen navigate campus life. Provide guidance on study habits and EWU resources.',
+             'Showalter Hall',
+             'Volunteer',
+             'Unpaid / Service Hours',
+             'Must be a sophomore or higher with a 3.0 GPA.',
+             'Departmental',
+             TRUE,
+             CURRENT_DATE + INTERVAL '30 days',
+             TRUE,
+             NOW()
+         );
+
+-- 2. Local Community Food Bank
+INSERT INTO learningsystem.job_postings (
+    id, employer_id, title, description, location,
+    category, salary_range, requirements, funding_source,
+    is_on_campus, deadline, is_active, created_at
+) VALUES (
+             gen_random_uuid(),
+             '753d7730-5d88-45a3-a5a7-bf7c3cfa643e', -- Replace with a valid employer UUID
+             'Food Distribution Assistant',
+             'Assist in sorting and distributing grocery items to local families. Great for students looking for weekend service hours.',
+             'Cheney Community Center',
+             'Volunteer',
+             'Unpaid',
+             'Must be able to lift 25 lbs. Friendly attitude required.',
+             'Private',
+             FALSE,
+             CURRENT_DATE + INTERVAL '60 days',
+             TRUE,
+             NOW()
+         );
+
+-- 3. Sustainability / Campus Garden
+INSERT INTO learningsystem.job_postings (
+    id, employer_id, title, description, location,
+    category, salary_range, requirements, funding_source,
+    is_on_campus, deadline, is_active, created_at
+) VALUES (
+             gen_random_uuid(),
+             '753d7730-5d88-45a3-a5a7-bf7c3cfa643e', -- Replace with a valid employer UUID
+             'Campus Garden Lead',
+             'Maintain the student community garden. Learn about sustainable agriculture while earning volunteer credits.',
+             'EWU Campus Labs',
+             'Volunteer',
+             'Service Credits',
+             'Interest in biology or sustainability preferred.',
+             'Grant',
+             TRUE,
+             CURRENT_DATE + INTERVAL '15 days',
+             TRUE,
+             NOW()
+         );
+
+-- 1. Simulate a 'Talent Search' view from a random employer to a random student
+INSERT INTO learningsystem.profile_access_logs (id, student_id, employer_id, accessed_at, access_context)
+VALUES (
+           gen_random_uuid(),
+           (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+       (SELECT id FROM learningsystem.users WHERE role = 'EMPLOYER' ORDER BY random() LIMIT 1),
+            CURRENT_TIMESTAMP - INTERVAL '2 hours',
+    'TALENT_SEARCH'
+    );
+
+-- 2. Simulate an 'Application Review' view (Accessing a student who applied)
+INSERT INTO learningsystem.profile_access_logs (id, student_id, employer_id, accessed_at, access_context)
+VALUES (
+           gen_random_uuid(),
+           (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+       (SELECT id FROM learningsystem.users WHERE role = 'EMPLOYER' ORDER BY random() LIMIT 1),
+            CURRENT_TIMESTAMP - INTERVAL '1 day',
+    'APPLICATION_REVIEW'
+    );
+
+-- 3. Simulate a historical view from 3 days ago
+INSERT INTO learningsystem.profile_access_logs (id, student_id, employer_id, accessed_at, access_context)
+VALUES (
+           gen_random_uuid(),
+           (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+       (SELECT id FROM learningsystem.users WHERE role = 'EMPLOYER' ORDER BY random() LIMIT 1),
+            CURRENT_TIMESTAMP - INTERVAL '3 days',
+    'TALENT_SEARCH'
+    );
+
+-- 4. Simulate a view for a 'Career Fair' follow-up
+INSERT INTO learningsystem.profile_access_logs (id, student_id, employer_id, accessed_at, access_context)
+VALUES (
+           gen_random_uuid(),
+           (SELECT id FROM learningsystem.users WHERE role = 'STUDENT' ORDER BY random() LIMIT 1),
+       (SELECT id FROM learningsystem.users WHERE role = 'EMPLOYER' ORDER BY random() LIMIT 1),
+            CURRENT_TIMESTAMP - INTERVAL '5 hours',
+    'CAREER_FAIR_DISCOVERY'
+    );
+
+
+DO $$
+DECLARE
+student_record RECORD;
+    employer_record RECORD;
+    i INT;
+    random_days INT;
+    random_hours INT;
+    contexts TEXT[] := ARRAY['TALENT_SEARCH', 'APPLICATION_REVIEW', 'CAREER_FAIR_DISCOVERY', 'RESUME_DOWNLOAD'];
+BEGIN
+FOR i IN 1..50 LOOP
+        -- Select a random student
+SELECT id INTO student_record FROM learningsystem.users
+WHERE role = 'STUDENT' ORDER BY random() LIMIT 1;
+
+-- Select a random employer
+SELECT id INTO employer_record FROM learningsystem.users
+WHERE role = 'EMPLOYER' ORDER BY random() LIMIT 1;
+
+-- Generate a random timestamp within the last 30 days
+random_days := floor(random() * 30);
+        random_hours := floor(random() * 24);
+
+        -- Insert the log entry
+        IF student_record.id IS NOT NULL AND employer_record.id IS NOT NULL THEN
+            INSERT INTO learningsystem.profile_access_logs (
+                id,
+                student_id,
+                employer_id,
+                accessed_at,
+                access_context
+            ) VALUES (
+                gen_random_uuid(),
+                student_record.id,
+                employer_record.id,
+                (CURRENT_TIMESTAMP - (random_days || ' days')::interval - (random_hours || ' hours')::interval),
+                contexts[floor(random() * array_length(contexts, 1)) + 1]
+            );
+END IF;
+END LOOP;
+END $$;
+
+DO $$
+DECLARE
+org_id UUID;
+    i INT;
+    event_types TEXT[] := ARRAY['INFO_SESSION', 'WORKSHOP', 'CAREER_FAIR', 'NETWORKING'];
+    titles TEXT[] := ARRAY[
+        'Amazon: Software Engineering Info Session',
+        'Resume Building for Tech Careers',
+        'Eastern Washington Spring Career Fair',
+        'Google: Cloud Architecture Workshop',
+        'Spokane Tech Networking Mixer',
+        'Mock Interview Marathon'
+    ];
+BEGIN
+FOR i IN 1..10 LOOP
+        -- Select a random organizer (Employer or Admin)
+SELECT id INTO org_id FROM learningsystem.users
+WHERE role IN ('EMPLOYER', 'STAFF') ORDER BY random() LIMIT 1;
+
+IF org_id IS NOT NULL THEN
+            INSERT INTO learningsystem.events (
+                id,
+                organizer_id,
+                title,
+                description,
+                type,
+                location,
+                is_virtual,
+                meeting_link,
+                start_time,
+                end_time,
+                capacity,
+                current_rsrv_count,
+                requires_fee,
+                fee_amount,
+                touchnet_payment_code,
+                is_active
+            ) VALUES (
+                gen_random_uuid(),
+                org_id,
+                titles[floor(random() * array_length(titles, 1)) + 1],
+                'Join us for an engaging session designed to help students bridge the gap between academia and industry. Open to all majors.',
+                event_types[floor(random() * array_length(event_types, 1)) + 1],
+                CASE WHEN (random() > 0.5) THEN 'EWU PUB Room ' || floor(random() * 300 + 100) ELSE 'Virtual Session' END,
+                (random() > 0.5),
+                CASE WHEN (random() > 0.5) THEN 'https://zoom.us/j/' || floor(random() * 900000000 + 100000000) ELSE NULL END,
+                -- Mix of past events and future events (last 10 days to next 30 days)
+                CURRENT_TIMESTAMP + (random() * 40 - 10 || ' days')::interval,
+                CURRENT_TIMESTAMP + (random() * 40 - 10 || ' days')::interval + '2 hours'::interval,
+                floor(random() * 100 + 20),
+                floor(random() * 15),
+                (random() > 0.8), -- 20% chance of requiring a fee
+                CASE WHEN (random() > 0.8) THEN (random() * 50 + 10)::numeric(10,2) ELSE 0 END,
+                CASE WHEN (random() > 0.8) THEN 'ASB-' || floor(random() * 9000 + 1000) ELSE NULL END,
+                TRUE
+            );
+END IF;
+END LOOP;
+END $$;
+
+-- 1. Software Engineering Internship at Amazon (Assuming employer_id UUID exists)
+INSERT INTO learningsystem.job_postings (
+    id,
+    employer_id,
+    title,
+    description,
+    location,
+    category,
+    salary_range,
+    created_at
+) VALUES (
+             gen_random_uuid(),
+             '483ab23e-8436-4a85-a4c0-e722948fdf2a', -- Replace with a valid employer_id
+             'Software Engineering Practicum',
+             'Join our cloud infrastructure team for a 3-month intensive coding internship.',
+             'Seattle, WA',
+             'INTERNSHIP',
+             '$35 - $45 / hr',
+             CURRENT_TIMESTAMP
+         );
+
+-- 2. Marketing Internship at local Non-Profit
+INSERT INTO learningsystem.job_postings (
+    id,
+    employer_id,
+    title,
+    description,
+    location,
+    category,
+    salary_range,
+    created_at
+) VALUES (
+             gen_random_uuid(),
+             '483ab23e-8436-4a85-a4c0-e722948fdf2a', -- Replace with a valid employer_id
+             'Digital Marketing & Outreach Intern',
+             'Help manage social media presence and community engagement for local youth programs.',
+             'Cheney, WA',
+             'INTERNSHIP',
+             'Unpaid / Academic Credit',
+             CURRENT_TIMESTAMP
+         );
+
+-- 3. Healthcare Administration Internship
+INSERT INTO learningsystem.job_postings (
+    id,
+    employer_id,
+    title,
+    description,
+    location,
+    category,
+    salary_range,
+    created_at
+) VALUES (
+             gen_random_uuid(),
+             '483ab23e-8436-4a85-a4c0-e722948fdf2a', -- Replace with a valid employer_id
+             'Healthcare Admin Practicum',
+             'Support hospital operations and patient flow management in a clinical environment.',
+             'Spokane, WA',
+             'INTERNSHIP',
+             'Stipend Provided',
+             CURRENT_TIMESTAMP
+         );

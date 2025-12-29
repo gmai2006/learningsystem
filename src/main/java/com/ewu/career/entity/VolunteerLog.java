@@ -4,58 +4,50 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "volunteer_logs")
 public class VolunteerLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    // Manual relationship to Student (User)
-    @Column(name = "student_id")
+    @Column(name = "student_id", nullable = false)
     private UUID studentId;
 
-    // Manual relationship to AppliedLearningExperience
     @Column(name = "experience_id")
     private UUID experienceId;
 
     @Column(name = "date_logged", nullable = false)
     private LocalDate dateLogged;
 
-    @Column(name = "hours_worked", precision = 5, scale = 2)
+    @Column(name = "hours_worked")
     private BigDecimal hoursWorked;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "impact_type")
-    private ImpactType impactType;
+    private String description;
 
-    @Column(name = "donation_amount", precision = 10, scale = 2)
+    @Column(name = "impact_type")
+    private String impactType; // 'HOURS', 'DONATION', 'VOTING', 'PHILANTHROPY'
+
+    @Column(name = "donation_amount")
     private BigDecimal donationAmount;
 
     @Column(name = "site_supervisor_email")
     private String siteSupervisorEmail;
 
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
+    private String status = "PENDING"; // PENDING, APPROVED, REJECTED
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    public VolunteerLog() {}
-
-    // Getters and Setters
     public UUID getId() {
         return id;
     }
@@ -96,11 +88,19 @@ public class VolunteerLog {
         this.hoursWorked = hoursWorked;
     }
 
-    public ImpactType getImpactType() {
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getImpactType() {
         return impactType;
     }
 
-    public void setImpactType(ImpactType impactType) {
+    public void setImpactType(String impactType) {
         this.impactType = impactType;
     }
 
@@ -120,12 +120,28 @@ public class VolunteerLog {
         this.siteSupervisorEmail = siteSupervisorEmail;
     }
 
-    public Boolean getVerified() {
-        return isVerified;
+    public String getStatus() {
+        return status;
     }
 
-    public void setVerified(Boolean verified) {
-        isVerified = verified;
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+    public LocalDateTime getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public void setVerifiedAt(LocalDateTime verifiedAt) {
+        this.verifiedAt = verifiedAt;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -134,26 +150,5 @@ public class VolunteerLog {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        VolunteerLog that = (VolunteerLog) o;
-        return Objects.equals(id, that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
     }
 }

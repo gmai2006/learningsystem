@@ -28,9 +28,9 @@ public class JobPostingService {
 
     @Inject private SystemConfigDao configDao;
 
-    //    public List<EmployerJobViewDTO> getEmployerView(UUID employerId, User actor) {
-    //        return jobPostingDao.getEmployerView(employerId);
-    //    }
+    public List<JobOversightView> findPracticumsByStatus(String status) {
+        return jobPostingDao.findPlacementsByStatus(status, "INTERNSHIP");
+    }
 
     /**
      * Retrieves job postings filtered by student eligibility. If the actor is a student, the list
@@ -57,7 +57,7 @@ public class JobPostingService {
      *
      * @param actor The student browsing the job board.
      */
-    public List<JobPosting> findAllPostings(User actor) {
+    public List<JobOversightView> findAllPostings(User actor) {
         // Non-students (Staff/Employers) see all standard jobs by default
         if ("STUDENT".equals(actor.getRole().name())) {
             return Collections.emptyList();
@@ -81,7 +81,7 @@ public class JobPostingService {
         boolean approvalNeeded = configDao.getBooleanValue("JOB_APPROVAL_REQUIRED");
         if (approvalNeeded && actor.getRole() == UserRole.EMPLOYER) {
             job.setIsActive(false); // Force pending status for vetting
-        }
+        } else job.setIsActive(true);
         return jobPostingDao.create(job);
     }
 

@@ -3,9 +3,7 @@ package com.ewu.career.api;
 import com.ewu.career.api.security.AuthContext;
 import com.ewu.career.dao.JobApplicationDao;
 import com.ewu.career.dto.JobFilters;
-import com.ewu.career.dto.JobPostingDTO;
-import com.ewu.career.entity.JobPosting;
-import com.ewu.career.entity.UserRole;
+import com.ewu.career.entity.*;
 import com.ewu.career.service.JobPostingService;
 import com.ewu.career.service.UserService;
 import jakarta.inject.Inject;
@@ -29,27 +27,24 @@ public class JobPostingResource {
     /** Inject the current authenticated user. */
     @Inject AuthContext authContext;
 
-    //    @GET
-    //    @Path("/employer-view")
-    //    public Response getJobsForEmployer() {
-    //        if (authContext.getActor() == null) {
-    //            return Response.status(Response.Status.UNAUTHORIZED)
-    //                    .entity("Authentication required.")
-    //                    .build();
-    //        }
-    //
-    //        if (authContext.getActor().getRole() != UserRole.EMPLOYER) {
-    //            return Response.status(Response.Status.FORBIDDEN)
-    //                    .entity("Access denied: Insufficient privileges for global oversight.")
-    //                    .build();
-    //        }
-    //
-    //        // Security: Only fetch jobs belonging to the logged-in employer
-    //        UUID employerId = authContext.getActor().getId();
-    //        List<EmployerJobViewDTO> jobs =
-    //                jobPostingService.getEmployerView(employerId, authContext.getActor());
-    //        return Response.ok(jobs).build();
-    //    }
+    /**
+     * Endpoint for the Internship Oversight page. Filters by status: PENDING_CONTRACT, ACTIVE, or
+     * COMPLETED.
+     */
+    @GET
+    @Path("internships")
+    public List<JobOversightView> getAcademicPracticums(@QueryParam("status") String status) {
+        final User actor = authContext.getActor();
+
+        // Security check: Ensure actor is STAFF or ADMIN
+        if (!actor.getRole().name().equals("STAFF")
+                && !actor.getRole().name().equals("ADMIN")
+                && !actor.getRole().name().equals("FACULTY")) {
+            throw new ForbiddenException("Access restricted to University Staff");
+        }
+
+        return jobPostingService.findPracticumsByStatus(status);
+    }
 
     /**
      * Retrieves a specialized view of job postings for students. Includes the 'isApplied' status
@@ -69,7 +64,30 @@ public class JobPostingResource {
         UUID studentId = authContext.getActor().getId();
 
         // 2. Delegate to the DAO to perform the filtered query with subquery-based DTO mapping
-        List<JobPostingDTO> jobs = jobApplicationDao.getStudentJobView(studentId, filters);
+        List<JobOversightView> jobs = jobApplicationDao.getStudentJobView(studentId, filters);
+        return Response.ok(jobs).build();
+    }
+
+    /**
+     * Retrieves a specialized view of job postings for students. Includes the 'isApplied' status
+     * for the logged-in user and supports dynamic filtering. * Accessible via: GET
+     * /api/jobs/student-view?search=...&onCampus=...
+     */
+    @GET
+    @Path("/volunteer")
+    public Response getVolunteerJobsForStudent(@BeanParam JobFilters filters) {
+        if (authContext.getActor() == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+
+        // 1. Extract the current student ID from the security context
+        UUID studentId = authContext.getActor().getId();
+
+        // 2. Delegate to the DAO to perform the filtered query with subquery-based DTO mapping
+        List<JobOversightView> jobs =
+                jobApplicationDao.getStudentVolunteerJobView(studentId, filters);
         return Response.ok(jobs).build();
     }
 
@@ -94,7 +112,7 @@ public class JobPostingResource {
         }
 
         // Calls a DAO method that ignores fundingSource and isActive flags
-        List<JobPosting> allJobs = jobPostingService.findAllPostings(authContext.getActor());
+        List<JobOversightView> allJobs = jobPostingService.findAllPostings(authContext.getActor());
         return Response.ok(allJobs).build();
     }
 
@@ -135,7 +153,8 @@ public class JobPostingResource {
         }
         // Role-based security check (Staff/Faculty only)
         if (authContext.getActor().getRole() != UserRole.STAFF
-                && authContext.getActor().getRole() != UserRole.FACULTY) {
+                && authContext.getActor().getRole() != UserRole.FACULTY
+                && authContext.getActor().getRole() != UserRole.EMPLOYER) {
             return Response.status(Response.Status.FORBIDDEN)
                     .entity("Access denied: Insufficient privileges for global oversight.")
                     .build();
@@ -160,7 +179,8 @@ public class JobPostingResource {
         }
         // Role-based security check (Staff/Faculty only)
         if (authContext.getActor().getRole() != UserRole.STAFF
-                && authContext.getActor().getRole() != UserRole.FACULTY) {
+                && authContext.getActor().getRole() != UserRole.FACULTY
+                && authContext.getActor().getRole() != UserRole.EMPLOYER) {
             return Response.status(Response.Status.FORBIDDEN)
                     .entity("Access denied: Insufficient privileges for global oversight.")
                     .build();

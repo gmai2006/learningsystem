@@ -20,12 +20,21 @@ build the JobPostingForm.jsx component so employers can start adding positions t
 
 Would you like me to update the StudentJobBoard.jsx to include a filter sidebar based on the category field we just implemented?
 
-Would you like me to create the JobDetailsModal.jsx for students that displays the full description, requirements, and salary?
-
 Would you like me to build a "Skill Matcher" service in Java that finds qualified students whenever a new job is posted?
 
 Would you like me to add a "Skills Breakdown" to this page that shows which specific skills from the student profiles are most common among the current pool of applicants?
 
 Would you like me to create a "Scheduler" component that allows the employer to pick a date and time for the interview when they change the status?
 
-Would you like me to implement the "Reschedule" logic so employers can update the scheduled_at time directly from the interview dashboard?
+Would you like me to create the logic for the "Service Excellence Certificate" that a student can download as a PDF once they reach 50 hours?
+
+Would you like me to add a "Jump to Page" dropdown for cases where students have high volumes of logs?
+
+**Would you like me to implement a "Student Anonymization" filter that hides the student's name and photo in search results until the employer actually clicks "View Profile" (triggering the log)?**
+
+Would you like me to implement the Employer-side "Financial Summary" view that shows the total revenue collected for a specific event?
+
+Would you like me to implement the backend service that triggers an email to the siteSupervisorEmail whenever a new log is submitted for verification?
+implement the POST endpoint in this same Resource to handle the submission of new logs from the LogImpactModal
+
+Would you like me to implement the Contract Upload Modal so staff can attach a physical signed learning agreement before clicking the "Approve" button?

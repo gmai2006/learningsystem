@@ -2,9 +2,11 @@ package com.ewu.career.api;
 
 import com.ewu.career.api.security.AuthContext;
 import com.ewu.career.dao.JobApplicationDao;
-import com.ewu.career.dto.JobApplicationDTO;
+import com.ewu.career.dto.ValueDTO;
 import com.ewu.career.entity.JobApplication;
+import com.ewu.career.entity.JobOversightView;
 import com.ewu.career.entity.User;
+import com.ewu.career.entity.UserRole;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -23,11 +25,15 @@ public class JobApplicationResource {
 
     /** Submit a new job application. Accessible by: STUDENTS */
     @POST
-    public Response applyForJob(JobApplication application) {
+    @Path("apply/{jobId}")
+    public Response applyForJob(@PathParam("jobId") UUID jobId, String note) {
         User currentUser = authContext.getActor();
 
+        JobApplication application = new JobApplication();
         // Security: Ensure student_id matches the logged-in user
         application.setStudentId(currentUser.getId());
+        application.setJobId(jobId);
+        application.setNotes(note);
 
         // Business Logic: Prevent duplicate applications
         if (applicationDao.exists(application.getStudentId(), application.getJobId())) {
@@ -45,7 +51,7 @@ public class JobApplicationResource {
     /** Get all applications for the current logged-in student. */
     @GET
     @Path("/my-applications")
-    public List<JobApplicationDTO> getMyApplications() {
+    public List<JobOversightView> getMyApplications() {
         UUID studentId = authContext.getActor().getId();
         return applicationDao.findByStudentId(studentId);
     }
@@ -66,7 +72,7 @@ public class JobApplicationResource {
     /** Get all applications for a specific job (for Employers/Staff). */
     @GET
     @Path("/job/{jobId}")
-    public List<JobApplication> getApplicationsByJob(@PathParam("jobId") UUID jobId) {
+    public List<JobOversightView> getApplicationsByJob(@PathParam("jobId") UUID jobId) {
         // In production, add a check here to ensure the requester owns the job posting
         return applicationDao.findByJobId(jobId);
     }
@@ -74,10 +80,24 @@ public class JobApplicationResource {
     /** Update application status (e.g., REVIEWING, ACCEPTED, REJECTED). */
     @PATCH
     @Path("/{id}/status")
-    public Response updateStatus(@PathParam("id") UUID id, @QueryParam("status") String status) {
+    public Response updateStatus(@PathParam("id") UUID id, ValueDTO dto) {
+        String status = dto.value;
         if (status == null || status.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Status is required")
+                    .build();
+        }
+
+        User actor = authContext.getActor();
+        if (actor == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authentication required.")
+                    .build();
+        }
+        // Role-based security check (Staff/Faculty only)
+        if (actor.getRole() != UserRole.EMPLOYER && actor.getRole() != UserRole.STAFF) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Access denied: Insufficient privileges for global oversight.")
                     .build();
         }
 

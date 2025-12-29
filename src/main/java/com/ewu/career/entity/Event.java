@@ -7,27 +7,28 @@ import java.util.UUID;
 
 /**
  * Entity representing Career Fairs, Workshops, and Information Sessions. Supports fee management
- * via TouchNet integration.
+ * via TouchNet integration and hybrid location logistics.
  */
 @Entity
-@Table(name = "events")
+@Table(name = "events", schema = "learningsystem")
 public class Event {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    /** The organizer of the event, typically a Staff member or an Employer. */
     @Column(name = "organizer_id")
     private UUID organizerId;
 
-    @Column(nullable = false)
     private String title;
-
-    /** Event type (e.g., 'Career Fair', 'Workshop', 'Info Session'). */
+    private String description;
     private String type;
-
     private String location;
+
+    @Column(name = "is_virtual")
+    private boolean isVirtual;
+
+    @Column(name = "meeting_link")
+    private String meetingLink;
 
     @Column(name = "start_time")
     private LocalDateTime startTime;
@@ -35,22 +36,36 @@ public class Event {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
-    /** Flag to determine if registration requires a fee. */
+    private Integer capacity;
+
+    @Column(name = "current_rsrv_count")
+    private int currentRsrvCount;
+
     @Column(name = "requires_fee")
     private boolean requiresFee;
 
-    /** The cost of the event, if applicable. */
-    @Column(name = "fee_amount", precision = 10, scale = 2)
+    @Column(name = "fee_amount")
     private BigDecimal feeAmount;
 
-    /** Reference code for processing payments through the TouchNet gateway. */
     @Column(name = "touchnet_payment_code")
     private String touchnetPaymentCode;
 
-    // Default Constructor
-    public Event() {}
+    @Column(name = "is_active")
+    private boolean isActive;
 
-    // Getters and Setters
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Transient private String organizerName;
+
+    public String getOrganizerName() {
+        return organizerName;
+    }
+
+    public void setOrganizerName(String organizerName) {
+        this.organizerName = organizerName;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -75,6 +90,14 @@ public class Event {
         this.title = title;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public String getType() {
         return type;
     }
@@ -91,6 +114,22 @@ public class Event {
         this.location = location;
     }
 
+    public boolean isVirtual() {
+        return isVirtual;
+    }
+
+    public void setVirtual(boolean virtual) {
+        isVirtual = virtual;
+    }
+
+    public String getMeetingLink() {
+        return meetingLink;
+    }
+
+    public void setMeetingLink(String meetingLink) {
+        this.meetingLink = meetingLink;
+    }
+
     public LocalDateTime getStartTime() {
         return startTime;
     }
@@ -105,6 +144,22 @@ public class Event {
 
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
+    }
+
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
+
+    public int getCurrentRsrvCount() {
+        return currentRsrvCount;
+    }
+
+    public void setCurrentRsrvCount(int currentRsrvCount) {
+        this.currentRsrvCount = currentRsrvCount;
     }
 
     public boolean isRequiresFee() {
@@ -129,5 +184,21 @@ public class Event {
 
     public void setTouchnetPaymentCode(String touchnetPaymentCode) {
         this.touchnetPaymentCode = touchnetPaymentCode;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

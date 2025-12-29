@@ -16,4 +16,5 @@ public record EmployerCandidateProfileDTO(
         String githubUrl,
         String profilePicture,
         String status,
-        String jobTitle) {}
+        String jobTitle,
+        UUID studentId) {}

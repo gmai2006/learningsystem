@@ -34,7 +34,8 @@ public class StudentProfileDao {
                                         "SELECT user_id, first_name, last_name, email, major, gpa,"
                                             + " work_study_eligible, graduation_year, bio,"
                                             + " resume_url, portfolio_url, linkedin_url,"
-                                            + " github_url, profile_picture_base64 FROM"
+                                            + " github_url, profile_picture_base64,"
+                                            + " is_ferpa_restricted FROM"
                                             + " learningsystem.vw_student_profiles WHERE user_id ="
                                             + " :uid")
                                 .setParameter("uid", userId)
@@ -76,7 +77,8 @@ public class StudentProfileDao {
                 (String) result[11],
                 (String) result[12],
                 new HashSet<>(skillList),
-                (String) result[13]);
+                (String) result[13],
+                (Boolean) result[14]);
     }
 
     /** Specifically updates the skills list by clearing and re-inserting. */

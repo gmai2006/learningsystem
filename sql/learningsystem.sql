@@ -38,8 +38,12 @@ CREATE TABLE learningsystem.student_profiles (
     github_url TEXT,
     profile_verified BOOLEAN DEFAULT FALSE,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    profile_picture_base64 TEXT;
+    profile_picture_base64 TEXT,
+    is_ferpa_restricted BOOLEAN DEFAULT FALSE
 );
+
+ALTER TABLE learningsystem.student_profiles
+    ADD COLUMN is_ferpa_restricted BOOLEAN DEFAULT FALSE;
 
 -- ALTER TABLE learningsystem.student_profiles
 --     ADD COLUMN bio TEXT,
@@ -152,6 +156,15 @@ CREATE TABLE learningsystem.job_applications (
     CONSTRAINT unique_student_job UNIQUE (student_id, job_id)
 );
 
+-- Add the JSONB column with a default empty array
+ALTER TABLE learningsystem.job_applications
+    ADD COLUMN learning_objectives JSONB DEFAULT '[]'::jsonb;
+
+-- Optional: Add a constraint to ensure the JSON is always an array
+ALTER TABLE learningsystem.job_applications
+    ADD CONSTRAINT ensure_objectives_is_array
+        CHECK (jsonb_typeof(learning_objectives) = 'array');
+
 -- Career Services (Jobs & Events)
 CREATE TABLE learningsystem.job_postings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -164,20 +177,34 @@ CREATE TABLE learningsystem.job_postings (
     deadline DATE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    deleted_at TIMESTAMP
+    deleted_at TIMESTAMP,
+    category VARCHAR(100) DEFAULT 'General',
+    service_hours INT DEFAULT 0,
+    salary_range VARCHAR(100),
+    requirements TEXT
 );
-
-ALTER TABLE learningsystem.job_postings
-ADD COLUMN category VARCHAR(100) DEFAULT 'General';
 
 -- Optional: Update existing jobs to better categories
 UPDATE learningsystem.job_postings SET category = 'Engineering' WHERE title ILIKE '%engineer%';
 UPDATE learningsystem.job_postings SET category = 'Marketing' WHERE title ILIKE '%marketing%';
 
--- Add the missing recruitment fields
 ALTER TABLE learningsystem.job_postings
-ADD COLUMN salary_range VARCHAR(100),
-ADD COLUMN requirements TEXT;
+ALTER COLUMN requirements TYPE JSONB
+USING (
+    CASE
+        WHEN requirements IS NULL OR requirements = '' THEN '[]'::jsonb
+        ELSE jsonb_build_array(requirements)
+    END
+);
+
+-- 2. Set the default value for new records
+ALTER TABLE learningsystem.job_postings
+    ALTER COLUMN requirements SET DEFAULT '[]'::jsonb;
+
+-- 3. Add a check constraint to maintain data integrity (must be an array)
+ALTER TABLE learningsystem.job_postings
+    ADD CONSTRAINT ensure_requirements_is_array
+        CHECK (jsonb_typeof(requirements) = 'array');
 
 -- Optional: Add a comment to help other developers
 COMMENT ON COLUMN learningsystem.job_postings.requirements IS 'HTML or Markdown supported list of job prerequisites';
@@ -209,18 +236,32 @@ CREATE INDEX idx_interviews_application_id ON learningsystem.interviews(applicat
 CREATE INDEX idx_interviews_scheduled_at ON learningsystem.interviews(scheduled_at);
 
 CREATE TABLE learningsystem.events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organizer_id UUID REFERENCES learningsystem.users(id),
-    title VARCHAR(255),
-    type VARCHAR(50), -- Career Fair, Workshop, Info Session
-    location VARCHAR(255),
-    start_time TIMESTAMP,
-    end_time TIMESTAMP,
+                                       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                       organizer_id UUID REFERENCES learningsystem.users(id),
+                                       title VARCHAR(255) NOT NULL,
+                                       description TEXT, -- Added for context
+                                       type VARCHAR(50), -- Career Fair, Workshop, Info Session
 
-    -- Fee management for events requiring payment (e.g., Alternative Service Breaks) [cite: 93]
-    requires_fee BOOLEAN DEFAULT FALSE,
-    fee_amount NUMERIC(10, 2),
-    touchnet_payment_code VARCHAR(100) -- Reference for eCommerce integration
+    -- Location & Hybrid Support
+                                       location VARCHAR(255),
+                                       is_virtual BOOLEAN DEFAULT FALSE, -- Added
+                                       meeting_link VARCHAR(500), -- Added
+
+    -- Timing
+                                       start_time TIMESTAMP NOT NULL,
+                                       end_time TIMESTAMP NOT NULL,
+
+    -- Attendance
+                                       capacity INT, -- Added for logistics
+                                       current_rsrv_count INT DEFAULT 0, -- To track fill rate
+
+    -- Fee management
+                                       requires_fee BOOLEAN DEFAULT FALSE,
+                                       fee_amount NUMERIC(10, 2),
+                                       touchnet_payment_code VARCHAR(100),
+
+                                       is_active BOOLEAN DEFAULT TRUE,
+                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE learningsystem.event_registrations (
@@ -233,20 +274,27 @@ CREATE TABLE learningsystem.event_registrations (
 
 -- Volunteer & Impact Tracking
 CREATE TABLE learningsystem.volunteer_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID REFERENCES learningsystem.users(id),
-    experience_id UUID REFERENCES learningsystem.applied_learning_experiences(id),
+                                               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                               student_id UUID REFERENCES learningsystem.users(id),
+                                               experience_id UUID REFERENCES learningsystem.applied_learning_experiences(id),
 
-    date_logged DATE NOT NULL,
-    hours_worked NUMERIC(5, 2),
+                                               date_logged DATE NOT NULL,
+                                               hours_worked NUMERIC(5, 2),
 
-    -- Tracking non-volunteer impacts (Philanthropy, Voting, etc.) [cite: 91]
-    impact_type VARCHAR(50), -- 'HOURS', 'DONATION', 'VOTING', 'PHILANTHROPY'
-    donation_amount NUMERIC(10, 2), -- Capture financial value if applicable
+    -- New: Context for the specific entry
+                                               description TEXT,
 
-    -- Verification
-    site_supervisor_email VARCHAR(255),
-    is_verified BOOLEAN DEFAULT FALSE
+    -- Tracking non-volunteer impacts
+                                               impact_type VARCHAR(50), -- 'HOURS', 'DONATION', 'VOTING', 'PHILANTHROPY'
+                                               donation_amount NUMERIC(10, 2),
+
+    -- Verification logic
+                                               site_supervisor_email VARCHAR(255),
+                                               status VARCHAR(50) DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED
+                                               rejection_reason TEXT, -- New: Why was this log sent back?
+
+                                               verified_at TIMESTAMP,
+                                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 --
@@ -325,3 +373,13 @@ CREATE TABLE learningsystem.notification_logs (
 
 -- Index for fast lookup when viewing a specific application's history
 CREATE INDEX idx_notification_logs_app_id ON learningsystem.notification_logs(application_id);
+
+CREATE TABLE learningsystem.profile_access_logs (
+                                                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                                    student_id UUID NOT NULL REFERENCES learningsystem.users(id) ON DELETE CASCADE,
+                                                    employer_id UUID NOT NULL REFERENCES learningsystem.users(id),
+                                                    accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                                    access_context VARCHAR(100) -- e.g., 'APPLICATION_REVIEW', 'TALENT_SEARCH'
+);
+
+CREATE INDEX idx_profile_logs_student ON learningsystem.profile_access_logs(student_id);

@@ -2,8 +2,11 @@ package com.ewu.career.api;
 
 import com.ewu.career.api.security.AuthContext;
 import com.ewu.career.dao.EmployerDashboardDao;
+import com.ewu.career.dao.EventDao;
 import com.ewu.career.dao.JobPostingDao;
+import com.ewu.career.dao.LoggingDao;
 import com.ewu.career.dto.*;
+import com.ewu.career.entity.Event;
 import com.ewu.career.entity.JobPosting;
 import com.ewu.career.entity.User;
 import com.ewu.career.entity.UserRole;
@@ -14,7 +17,6 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.io.File;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +34,10 @@ public class EmployerDashboardResource {
     @Inject private EmailService emailService;
 
     @Inject private JobPostingService jobPostingService;
+
+    @Inject private LoggingDao loggingService;
+
+    @Inject EventDao eventDao;
 
     /**
      * Retrieves a unified summary for the Employer Dashboard. Includes job counts, applicant
@@ -162,6 +168,15 @@ public class EmployerDashboardResource {
             EmployerCandidateProfileDTO profile =
                     dashboardDao.getFullCandidateProfile(employerId, applicationId);
 
+            loggingService.logProfileView(
+                    employerId,
+                    authContext.getActor().getFirstName()
+                            + " "
+                            + authContext.getActor().getLastName(),
+                    profile.studentId(),
+                    "TALENT_SEARCH" // or "APPLICATION_REVIEW"
+                    );
+
             return Response.ok(profile).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -186,16 +201,8 @@ public class EmployerDashboardResource {
                     .build();
         }
 
-        // 1. Get the authenticated employer's ID
-        UUID employerId = authContext.getActor().getId();
-
-        // 2. Set necessary system fields
-        newJob.setEmployerId(employerId);
-        newJob.setCreatedAt(LocalDateTime.now());
-        newJob.setIsActive(true); // Default to active
-
         // 3. Persist the new job to the database
-        jobPostingDao.create(newJob);
+        jobPostingService.createJob(actor, newJob);
 
         return Response.status(Response.Status.CREATED).entity(newJob).build();
     }
@@ -210,11 +217,12 @@ public class EmployerDashboardResource {
                     .build();
         }
         // Role-based security check (Staff/Faculty only)
-        if (actor.getRole() != UserRole.EMPLOYER) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity("Access denied: Insufficient privileges for global oversight.")
-                    .build();
-        }
+        //        if (actor.getRole() != UserRole.EMPLOYER) {
+        //            return Response.status(Response.Status.FORBIDDEN)
+        //                    .entity("Access denied: Insufficient privileges for global
+        // oversight.")
+        //                    .build();
+        //        }
 
         return Response.ok(jobPostingDao.getEmployerJobDetailView(jobId, actor.getId())).build();
     }
@@ -359,5 +367,19 @@ public class EmployerDashboardResource {
                     .entity("An error occurred while updating the job.")
                     .build();
         }
+    }
+
+    @GET
+    @Path("events")
+    public Response getEventsByStatus(@QueryParam("status") String status) {
+        // In a real app, retrieve the employer ID from the SecurityContext
+        UUID employerId = authContext.getActor().getId();
+
+        // Default to UPCOMING if no status is provided
+        String eventStatus = (status == null) ? "UPCOMING" : status.toUpperCase();
+
+        List<Event> events = eventDao.getEventsByStatus(employerId, eventStatus, false);
+
+        return Response.ok(events).build();
     }
 }

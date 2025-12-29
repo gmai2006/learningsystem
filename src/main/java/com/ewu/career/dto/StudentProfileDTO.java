@@ -19,4 +19,5 @@ public record StudentProfileDTO(
         String linkedinUrl,
         String githubUrl,
         Set<String> skills, // Populated separately in the DAO
-        String profilePictureBase64) {}
+        String profilePictureBase64,
+        boolean isFerpaRestricted) {}

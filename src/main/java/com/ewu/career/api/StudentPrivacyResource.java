@@ -1,27 +1,28 @@
 package com.ewu.career.api;
 
 import com.ewu.career.api.security.AuthContext;
-import com.ewu.career.dao.StudentProfileDao;
-import com.ewu.career.dto.StudentProfileDTO;
+import com.ewu.career.dao.StudentPrivacyDao;
+import com.ewu.career.dto.PagedAccessLogs;
 import com.ewu.career.entity.User;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.util.List;
-import java.util.UUID;
 
-@Path("/student/profile")
+@Path("/student/privacy")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class StudentProfileResource {
+public class StudentPrivacyResource {
 
-    @Inject private StudentProfileDao studentProfileDao;
+    @Inject private StudentPrivacyDao studentPrivacyDao;
 
     @Inject private AuthContext authContext;
 
     @GET
-    public Response findByUserId() {
+    public Response findByUserId(
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("20") int size) {
         // 1. Identify the current student from the Security Context
         final User student = authContext.getActor();
 
@@ -31,13 +32,15 @@ public class StudentProfileResource {
                     .build();
         }
 
-        final StudentProfileDTO profile = studentProfileDao.findByUserId(student.getId());
-
-        return Response.ok(profile).build();
+        final PagedAccessLogs privacy =
+                studentPrivacyDao.getPagedAccessLogs(student.getId(), page, size);
+        return Response.ok(privacy).build();
     }
 
     @PATCH
-    public Response updateProfile(StudentProfileDTO updatedProfile) {
+    @Path("toggle")
+    @Transactional
+    public Response updatePrivacy(boolean isRestricted) {
         // 1. Identify the current student from the Security Context
         User student = authContext.getActor();
 
@@ -46,16 +49,9 @@ public class StudentProfileResource {
                     .entity("User context not found.")
                     .build();
         }
-        UUID currentUserId = authContext.getActor().getId();
 
-        // Save profile fields (GPA, Bio, etc.)
-        studentProfileDao.updateStudentProfile(updatedProfile, student);
+        studentPrivacyDao.updatePrivacyFlag(student.getId(), isRestricted);
 
-        // Save skills separately using our manual logic
-        if (updatedProfile.skills() != null) {
-            studentProfileDao.updateSkills(currentUserId, List.copyOf(updatedProfile.skills()));
-        }
-
-        return Response.ok(updatedProfile).build();
+        return Response.ok().build();
     }
 }

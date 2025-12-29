@@ -3,7 +3,11 @@ package com.ewu.career.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Entity representing job opportunities, internships, and student employment. Maps to the updated
@@ -47,8 +51,12 @@ public class JobPosting {
     @Column(name = "salary_range")
     private String salaryRange;
 
-    @Column(columnDefinition = "TEXT")
-    private String requirements;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "requirements", columnDefinition = "jsonb")
+    private List<String> requirements = new ArrayList<>();
+
+    @Column(name = "service_hours")
+    private Integer serviceHours = 0;
 
     /**
      * * NEW: Tracks when the posting was created for dashboard 'new' status logic. updatable =
@@ -172,11 +180,19 @@ public class JobPosting {
         this.salaryRange = salaryRange;
     }
 
-    public String getRequirements() {
+    public List<String> getRequirements() {
         return requirements;
     }
 
-    public void setRequirements(String requirements) {
+    public void setRequirements(List<String> requirements) {
         this.requirements = requirements;
+    }
+
+    public Integer getServiceHours() {
+        return serviceHours;
+    }
+
+    public void setServiceHours(Integer serviceHours) {
+        this.serviceHours = serviceHours;
     }
 }

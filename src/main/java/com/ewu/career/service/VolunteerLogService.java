@@ -26,7 +26,6 @@ public class VolunteerLogService {
         }
 
         log.setStudentId(actor.getId());
-        log.setVerified(false); // Must be verified by supervisor
 
         VolunteerLog savedLog = logDao.create(log);
 
