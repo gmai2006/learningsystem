@@ -38,10 +38,9 @@ public class StudentDashboardDao {
         Long newActive =
                 jpa.getEntityManager()
                         .createQuery(
-                                "SELECT COUNT(a) FROM JobPosting a WHERE a.employerId = :sid "
-                                        + "AND a.isActive = true AND a.createdAt >= :since",
+                                "SELECT COUNT(a) FROM JobPosting a WHERE a.isActive = true AND"
+                                        + " a.createdAt >= :since",
                                 Long.class)
-                        .setParameter("sid", studentId)
                         .setParameter("since", oneWeekAgo)
                         .getSingleResult();
 

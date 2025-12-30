@@ -26,7 +26,8 @@ public class JobApplicationResource {
     /** Submit a new job application. Accessible by: STUDENTS */
     @POST
     @Path("apply/{jobId}")
-    public Response applyForJob(@PathParam("jobId") UUID jobId, String note) {
+    public Response applyForJob(@PathParam("jobId") UUID jobId, ValueDTO dto) {
+        String note = dto.value;
         User currentUser = authContext.getActor();
 
         JobApplication application = new JobApplication();
